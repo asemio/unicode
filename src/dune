@@ -1,5 +1,6 @@
 (library
   (name unicode)
+  (public_name unicode)
   (libraries
     utf8conv
 
