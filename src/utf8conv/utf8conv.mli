@@ -5,12 +5,7 @@
    and only depends on OCaml's standard library.
 *)
 
-val utf8_of_windows1252 :
-  ?pos: int ->
-  ?len: int ->
-  ?undefined: (char -> string) ->
-  string -> string
-  (** Converts an ASCII, ISO-8859-1 or Windows-1252 string or substring
+(** Converts an ASCII, ISO-8859-1 or Windows-1252 string or substring
       into a UTF-8 string.
 
       @param pos position of the beginning of the input substring.
@@ -21,13 +16,13 @@ val utf8_of_windows1252 :
                  is to raise a [Failure] exception with a useful
                  error message.
   *)
+val utf8_of_windows1252 : ?pos:int -> ?len:int -> ?undefined:(char -> string) -> string -> string
 
-val is_ascii : ?pos: int -> ?len: int -> string -> bool
-  (** Returns true if and only if the given string or substring
+(** Returns true if and only if the given string or substring
       contains only 7-bit characters. *)
+val is_ascii : ?pos:int -> ?len:int -> string -> bool
 
-val is_iso88591 : ?pos: int -> ?len: int -> string -> bool
-  (** This function returns true if and only if the given string or substring
+(** This function returns true if and only if the given string or substring
       contains only legal ISO-8859-1-encoded characters
       (all printable characters plus all ASCII control characters).
 
@@ -39,9 +34,9 @@ val is_iso88591 : ?pos: int -> ?len: int -> string -> bool
 
       See also [is_windows1252].
   *)
+val is_iso88591 : ?pos:int -> ?len:int -> string -> bool
 
-val is_windows1252 : ?pos: int -> ?len: int -> string -> bool
-  (** This function returns true if and only if the given string or substring
+(** This function returns true if and only if the given string or substring
       contains only legal Windows-1252-encoded characters
       (all printable characters plus all ASCII control characters).
 
@@ -52,13 +47,9 @@ val is_windows1252 : ?pos: int -> ?len: int -> string -> bool
 
       See also [is_iso88591].
   *)
+val is_windows1252 : ?pos:int -> ?len:int -> string -> bool
 
-val escape :
-  ?pos: int ->
-  ?len: int ->
-  ?noquotes: bool ->
-  string -> string
-  (** Produces a valid OCaml string literal where non-printable and non-ASCII
+(** Produces a valid OCaml string literal where non-printable and non-ASCII
       bytes are escaped using the hexadecimal notation
       except for the usual ['\n'], ['\t'] and ['\r'].
       [escape s] can be used as a substitute for [Printf.sprintf "%S" s]
@@ -66,3 +57,4 @@ val escape :
 
       @param noquotes omit leading and trailing double-quotes. Default: false.
   *)
+val escape : ?pos:int -> ?len:int -> ?noquotes:bool -> string -> string
