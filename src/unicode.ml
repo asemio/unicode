@@ -28,16 +28,20 @@ let valid_encodings =
     "CSISOLATIN1";
   ]
 
-module Uutf = struct
-  include Uutf
-
-  let sexp_of_decoder_encoding enc = Sexp.Atom (Uutf.encoding_to_string enc)
-end
+type standard_encoding =
+  [ `ISO_8859_1
+  | `US_ASCII
+  | `UTF_16
+  | `UTF_16BE
+  | `UTF_16LE
+  | `UTF_8
+  ]
+[@@deriving sexp, compare, equal]
 
 type original_encoding =
-  | Standard     of Uutf.decoder_encoding
+  | Standard     of standard_encoding
   | Windows_1252
-[@@deriving sexp_of]
+[@@deriving sexp, compare, equal]
 
 type lookup = {
   indexes: int array;
@@ -49,7 +53,7 @@ type with_length = {
   bytes: string;
   length: int;
 }
-[@@deriving sexp_of]
+[@@deriving sexp, compare, equal]
 
 type kind =
   | Passthrough    of string
@@ -61,9 +65,9 @@ type kind =
   | Utf8_len       of with_length
   | Normalized     of string
   | Normalized_len of with_length
-[@@deriving sexp_of]
+[@@deriving sexp, compare, equal]
 
-type t = { mutable value: kind } [@@deriving sexp_of]
+type t = { mutable value: kind } [@@deriving sexp, compare, equal]
 
 type enc =
   [ `Ok
