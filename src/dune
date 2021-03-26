@@ -1,0 +1,23 @@
+(library
+  (name unicode)
+  (libraries
+    utf8conv
+
+    core_kernel
+    uucp
+    uunf
+    uunf.string
+    uuseg
+    uuseg.string
+    uutf
+  )
+  (preprocess (pps
+    ppx_jane
+  ))
+
+  (js_of_ocaml (javascript_files ./runtime.js))
+  (foreign_stubs (language cxx) (names dmetaphone)
+    (flags -std=c++17 -O3 -Wall -fPIC -I.)
+  )
+  (c_library_flags (-lstdc++))
+)

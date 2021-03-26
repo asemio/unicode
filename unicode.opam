@@ -1,0 +1,28 @@
+opam-version: "2.0"
+maintainer: "Asemio"
+authors: [
+  "Simon Grondin"
+]
+synopsis: "Asemio's Unicode lib"
+description: """
+Collection of string functions operating at the grapheme cluster level.
+"""
+license: "MIT"
+tags: []
+homepage: "https://github.com/asemio/unicode"
+doc: "https://github.com/asemio/unicode"
+bug-reports: "https://github.com/asemio/unicode/issues"
+depends: [
+  "ocaml" { >= "4.10.0" }
+  "dune" { >= "1.9.0"}
+
+  "core_kernel" { >= "v0.14.0" }
+
+  "uucp"
+  "uunf"
+  "uuseg"
+  "uutf"
+
+  "ppx_deriving" { >= "4.4.1" }
+]
+build: ["dune" "build" "-p" name "-j" jobs]
