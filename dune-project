@@ -1,3 +1,3 @@
 (lang dune 2.0)
 (name unicode)
-(version 1.0.2)
+(version 1.0.3)

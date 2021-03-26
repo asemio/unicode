@@ -1,3 +1,4 @@
 (library
   (name utf8conv)
+  (public_name unicode.utf8conv)
 )
