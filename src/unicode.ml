@@ -36,12 +36,12 @@ type standard_encoding =
   | `UTF_16LE
   | `UTF_8
   ]
-[@@deriving sexp, compare, equal]
+[@@deriving sexp]
 
 type original_encoding =
   | Standard     of standard_encoding
   | Windows_1252
-[@@deriving sexp, compare, equal]
+[@@deriving sexp]
 
 type lookup = {
   indexes: int array;
@@ -53,7 +53,7 @@ type with_length = {
   bytes: string;
   length: int;
 }
-[@@deriving sexp, compare, equal]
+[@@deriving sexp]
 
 type kind =
   | Passthrough    of string
@@ -65,9 +65,9 @@ type kind =
   | Utf8_len       of with_length
   | Normalized     of string
   | Normalized_len of with_length
-[@@deriving sexp, compare, equal]
+[@@deriving sexp]
 
-type t = { mutable value: kind } [@@deriving sexp, compare, equal]
+type t = { mutable value: kind } [@@deriving sexp]
 
 type enc =
   [ `Ok
@@ -336,27 +336,33 @@ let dmetaphone box =
   let bytes = unaccent box |> cmp_bytes in
   { value = Normalized (Dmetaphone.dmetaphone bytes) }
 
-let unicode_trim box =
-  let bytes = utf8_bytes box in
-  let left, right =
-    Uutf.String.fold_utf_8
-      (fun acc i m ->
-        match m with
-        | `Malformed _ -> acc
-        | `Uchar u -> (
-          match acc with
-          | None, _ when not (Uucp.White.is_white_space u) -> Some i, Some (i, u)
-          | (None, _) as x -> x
-          | (Some _ as x), _ when not (Uucp.White.is_white_space u) -> x, Some (i, u)
-          | Some _, _ -> acc
-        ))
-      (None, None) bytes
-  in
-  let sliced =
-    String.slice bytes (Option.value ~default:0 left)
-      (Option.value_map ~default:0 ~f:(fun (i, u) -> i + (Uchar.to_scalar u |> num_bytes)) right)
-  in
-  rebox box sliced
+let trim ?(unicode_ws = true) box =
+  match unicode_ws with
+  | true ->
+    let bytes = utf8_bytes box in
+    let left, right =
+      Uutf.String.fold_utf_8
+        (fun acc i m ->
+          match m with
+          | `Malformed _ -> acc
+          | `Uchar u -> (
+            match acc with
+            | None, _ when not (Uucp.White.is_white_space u) -> Some i, Some (i, u)
+            | (None, _) as x -> x
+            | (Some _ as x), _ when not (Uucp.White.is_white_space u) -> x, Some (i, u)
+            | Some _, _ -> acc
+          ))
+        (None, None) bytes
+    in
+    let sliced =
+      String.slice bytes (Option.value ~default:0 left)
+        (Option.value_map ~default:0 ~f:(fun (i, u) -> i + (Uchar.to_scalar u |> num_bytes)) right)
+    in
+    rebox box sliced
+  | false ->
+    let bytes = raw_bytes box in
+    let trimmed = String.strip bytes in
+    rebox box trimmed
 
 let squish box =
   let bytes = utf8_bytes box in
@@ -386,11 +392,6 @@ let squish box =
   in
   let squished = Buffer.contents buf in
   rebox ~length box squished
-
-let trim box =
-  let bytes = raw_bytes box in
-  let trimmed = String.strip bytes in
-  rebox box trimmed
 
 let index box =
   let bytes = utf8_bytes box in
@@ -442,3 +443,7 @@ let ( <= ) box1 box2 = String.( <= ) (cmp_bytes box1) (cmp_bytes box2)
 let ( >= ) box1 box2 = String.( >= ) (cmp_bytes box1) (cmp_bytes box2)
 
 let ( > ) box1 box2 = String.( > ) (cmp_bytes box1) (cmp_bytes box2)
+
+let equal = ( = )
+
+let compare x y = String.compare (cmp_bytes x) (cmp_bytes y)
