@@ -75,7 +75,7 @@ type enc =
   ]
 
 let recode ?nln ?encoding out_encoding (src : [ `Channel of In_channel.t | `String  of string ])
-   (dst : [ `Channel of Out_channel.t | `Buffer  of Buffer.t ]) =
+  (dst : [ `Channel of Out_channel.t | `Buffer  of Buffer.t ]) =
   let rec loop d e =
     match Uutf.decode d with
     | `Uchar _ as u ->
@@ -321,13 +321,14 @@ let standardize ?(rep = ' ') box =
           | None -> glyph
         in
         String.fold chunk ~init:top_prev_junk ~f:(fun prev_junk c ->
-            if Char.is_alphanum c
-            then begin
-              if prev_junk && Int.(Buffer.length buf <> 0) then Buffer.add_char buf rep;
-              Buffer.add_char buf (Char.lowercase c);
-              false
-            end
-            else true))
+          if Char.is_alphanum c
+          then begin
+            if prev_junk && Int.(Buffer.length buf <> 0) then Buffer.add_char buf rep;
+            Buffer.add_char buf (Char.lowercase c);
+            false
+          end
+          else true
+        ))
       false bytes
   in
   { value = Normalized (Buffer.contents buf) }

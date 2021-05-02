@@ -1,5 +1,5 @@
-# "Asemio Style" v1.0
-# Last updated for ocamlformat 0.15.0
+# "Asemio Style" v1.1
+# Last updated for ocamlformat 0.18.0
 
 # All available options are listed.
 # An option is commented out when the value matches the default
@@ -45,11 +45,10 @@ let-and = sparse
 # let-binding-indent = 2
 # let-binding-spacing = compact
 # let-module = compact
-# let-open = preserve
 margin = 106
 # match-indent = 0
 # match-indent-nested = never
-max-indent = 3
+max-indent = 2
 # module-item-spacing = sparse
 # nested-match = wrap
 parens-ite = true

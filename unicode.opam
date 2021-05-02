@@ -16,6 +16,8 @@ depends: [
   "ocaml" { >= "4.10.0" }
   "dune" { >= "1.9.0"}
 
+  "ocamlformat" { = "0.18.0" }
+
   "core_kernel" { >= "v0.14.0" }
 
   "uucp"

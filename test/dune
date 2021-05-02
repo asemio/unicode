@@ -1,0 +1,12 @@
+(library
+  (name tests)
+  (inline_tests)
+  (libraries
+    unicode
+
+    core_kernel
+  )
+  (preprocess (pps
+    ppx_jane
+  ))
+)
