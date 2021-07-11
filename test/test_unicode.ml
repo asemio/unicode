@@ -214,7 +214,49 @@ let%expect_test "Unaccent" =
   [%expect {|
     >+-~
     >+-~
-    true |}]
+    true |}];
+
+  str "letesitmeny" (create {s|létesítmény|s} |> unaccent |> cmp_bytes);
+  [%expect {|
+    letesitmeny
+    letesitmeny
+    true
+ |}];
+
+  str "emlekezteto" (create {s|emlékeztető|s} |> unaccent |> cmp_bytes);
+  [%expect {|
+    emlekezteto
+    emlekezteto
+    true
+ |}];
+
+  str "dongjianshi" (create {s|dǒngjiānshì|s} |> unaccent |> cmp_bytes);
+  [%expect {|
+   dongjianshi
+   dongjianshi
+   true
+|}];
+
+  str "glosniej" (create {s|głośniej|s} |> unaccent |> cmp_bytes);
+  [%expect {|
+    glosniej
+    glosniej
+    true
+|}];
+
+  str "zajal" (create {s|zajął|s} |> unaccent |> cmp_bytes);
+  [%expect {|
+    zajal
+    zajal
+    true
+|}];
+
+  str "tozsamosc" (create {s|tożsamość|s} |> unaccent |> cmp_bytes);
+  [%expect {|
+    tozsamosc
+    tozsamosc
+    true
+|}]
 
 let%expect_test "Normalize" =
   str "figueroa garcia otel jr" (create "  Figuéroa-Garcia ｟Ô℡｠ Jr. " |> standardize |> cmp_bytes);

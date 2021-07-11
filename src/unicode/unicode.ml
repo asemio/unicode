@@ -309,33 +309,34 @@ let unaccent box =
     () bytes;
   { value = Normalized (Buffer.contents buf) }
 
-let standardize ?(rep = ' ') box =
+let standardize ?(rep = " ") ?(ignore = const false) ?(filter = Char.is_alphanum) box =
   let bytes = cmp_bytes box in
   let buf = Buffer.create (String.length bytes + 10) in
   let (_ : bool) =
     Uuseg_string.fold_utf_8 `Grapheme_cluster
       (fun top_prev_junk glyph ->
-        let chunk =
-          match String.Map.find Unaccent_rules.lookup glyph with
-          | Some rep -> rep
-          | None -> glyph
-        in
-        String.fold chunk ~init:top_prev_junk ~f:(fun prev_junk c ->
-          if Char.is_alphanum c
-          then begin
-            if prev_junk && Int.(Buffer.length buf <> 0) then Buffer.add_char buf rep;
-            Buffer.add_char buf (Char.lowercase c);
-            false
-          end
-          else true
-        ))
+        match ignore glyph with
+        | true ->
+          if top_prev_junk && Int.(Buffer.length buf <> 0) then Buffer.add_string buf rep;
+          Buffer.add_string buf glyph;
+          false
+        | false ->
+          let chunk =
+            match String.Map.find Unaccent_rules.lookup glyph with
+            | Some rep -> rep
+            | None -> glyph
+          in
+          String.fold chunk ~init:top_prev_junk ~f:(fun prev_junk c ->
+            match filter c with
+            | true ->
+              if prev_junk && Int.(Buffer.length buf <> 0) then Buffer.add_string buf rep;
+              Buffer.add_char buf (Char.lowercase c);
+              false
+            | false -> true
+          ))
       false bytes
   in
   { value = Normalized (Buffer.contents buf) }
-
-let dmetaphone box =
-  let bytes = unaccent box |> cmp_bytes in
-  { value = Normalized (Dmetaphone.dmetaphone bytes) }
 
 let trim ?(unicode_ws = true) box =
   match unicode_ws with
@@ -393,6 +394,23 @@ let squish box =
   in
   let squished = Buffer.contents buf in
   rebox ~length box squished
+
+let split_glyphs_cmp box =
+  let bytes = cmp_bytes box in
+  let glyphs = Queue.create ~capacity:30 () in
+  Uuseg_string.fold_utf_8 `Grapheme_cluster
+    (fun () m ->
+      Queue.enqueue glyphs m;
+      ())
+    () bytes;
+  Queue.to_array glyphs
+
+let dmetaphone ?max_length box =
+  let original, glyphs =
+    let base = box |> standardize ~ignore:Dmetaphone.ignore |> to_upper in
+    cmp_bytes base, split_glyphs_cmp base
+  in
+  Dmetaphone.double_metaphone ?max_length ~standardized:original ~glyphs
 
 let index box =
   let bytes = utf8_bytes box in

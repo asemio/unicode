@@ -5,7 +5,7 @@ authors: [
 ]
 synopsis: "Asemio's Unicode lib"
 description: """
-Collection of string functions operating at the grapheme cluster level.
+Postgresql tsquery/tsvector generators
 """
 license: "MIT"
 tags: []
@@ -20,13 +20,6 @@ depends: [
 
   "core_kernel" { >= "v0.14.0" }
 
-  "uucp"
-  "uunf"
-  "uuseg"
-  "uutf"
-
   "ppx_deriving" { >= "4.4.1" }
-
-  "ppx_blob" { with-test }
 ]
 build: ["dune" "build" "-p" name "-j" jobs]

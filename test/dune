@@ -6,7 +6,15 @@
 
     core_kernel
   )
+  (foreign_stubs (language cxx) (names dmetaphone)
+    (flags -std=c++17 -O3 -Wall -fPIC -I.)
+  )
+  (c_library_flags (-lstdc++))
   (preprocess (pps
     ppx_jane
+    ppx_blob
   ))
+  (preprocessor_deps
+    (glob_files "*.txt")
+  )
 )

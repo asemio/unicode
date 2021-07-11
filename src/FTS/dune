@@ -1,0 +1,14 @@
+(library
+  (name FTS)
+  (public_name FTS)
+  (inline_tests)
+  (libraries
+    unicode
+
+    core_kernel
+    re
+  )
+  (preprocess (pps
+    ppx_jane
+  ))
+)

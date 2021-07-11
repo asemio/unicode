@@ -22,13 +22,15 @@ val is_non_blank : t -> bool
 
 val unaccent : t -> t
 
-val standardize : ?rep:char -> t -> t
+val standardize : ?rep:string -> ?ignore:(string -> bool) -> ?filter:(char -> bool) -> t -> t
 
-val dmetaphone : t -> t
+val dmetaphone : ?max_length:int -> t -> string * string
 
 val trim : ?unicode_ws:bool -> t -> t
 
 val squish : t -> t
+
+val split_glyphs_cmp : t -> string array
 
 val slice : t -> int -> int -> t
 

@@ -1271,13 +1271,19 @@ value stub_dmetaphone(value v_name)
 {
   CAMLparam1(v_name);
   string name(String_val(v_name), caml_string_length(v_name));
-  CAMLlocal1(v_ret);
+  CAMLlocal3(v_primary, v_secondary, v_ret);
 
   char* codes[2];
   DoubleMetaphone(const_cast<char *>(name.c_str()), codes);
   string primary{codes[0]};
+  string secondary{codes[1]};
 
-  v_ret = caml_alloc_initialized_string(primary.length(), primary.c_str());
+  v_primary = caml_alloc_initialized_string(primary.length(), primary.c_str());
+  v_secondary = caml_alloc_initialized_string(secondary.length(), secondary.c_str());
+  v_ret = caml_alloc_small(2, 0);
+  Field(v_ret, 0) = v_primary;
+  Field(v_ret, 1) = v_secondary;
+
   delete codes[0];
   delete codes[1];
   CAMLreturn (v_ret);
