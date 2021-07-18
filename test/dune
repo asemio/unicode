@@ -16,5 +16,6 @@
   ))
   (preprocessor_deps
     (glob_files "*.txt")
+    (glob_files "words/*.txt")
   )
 )

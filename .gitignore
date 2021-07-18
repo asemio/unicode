@@ -3,5 +3,4 @@
 _opam/
 _build/
 **/.merlin
-test/*.txt
-
+test/words/*.txt

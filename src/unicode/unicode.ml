@@ -309,13 +309,14 @@ let unaccent box =
     () bytes;
   { value = Normalized (Buffer.contents buf) }
 
-let standardize ?(rep = " ") ?(ignore = const false) ?(filter = Char.is_alphanum) box =
+let standardize ?(rep = " ") ?(preserve = const false) ?(filter = Char.is_alphanum)
+  ?(case = Char.lowercase) box =
   let bytes = cmp_bytes box in
   let buf = Buffer.create (String.length bytes + 10) in
   let (_ : bool) =
     Uuseg_string.fold_utf_8 `Grapheme_cluster
       (fun top_prev_junk glyph ->
-        match ignore glyph with
+        match preserve glyph with
         | true ->
           if top_prev_junk && Int.(Buffer.length buf <> 0) then Buffer.add_string buf rep;
           Buffer.add_string buf glyph;
@@ -330,7 +331,7 @@ let standardize ?(rep = " ") ?(ignore = const false) ?(filter = Char.is_alphanum
             match filter c with
             | true ->
               if prev_junk && Int.(Buffer.length buf <> 0) then Buffer.add_string buf rep;
-              Buffer.add_char buf (Char.lowercase c);
+              Buffer.add_char buf (case c);
               false
             | false -> true
           ))
@@ -395,7 +396,7 @@ let squish box =
   let squished = Buffer.contents buf in
   rebox ~length box squished
 
-let split_glyphs_cmp box =
+let split_into_glyphs box =
   let bytes = cmp_bytes box in
   let glyphs = Queue.create ~capacity:30 () in
   Uuseg_string.fold_utf_8 `Grapheme_cluster
@@ -407,8 +408,8 @@ let split_glyphs_cmp box =
 
 let dmetaphone ?max_length box =
   let original, glyphs =
-    let base = box |> standardize ~ignore:Dmetaphone.ignore |> to_upper in
-    cmp_bytes base, split_glyphs_cmp base
+    let base = box |> standardize ~preserve:Dmetaphone.preserve ~case:Char.uppercase in
+    cmp_bytes base, split_into_glyphs base
   in
   Dmetaphone.double_metaphone ?max_length ~standardized:original ~glyphs
 

@@ -1,0 +1,2 @@
+File: test/french.txt
+Source: https://www.freelang.com/dictionnaire/dic-francais.php
