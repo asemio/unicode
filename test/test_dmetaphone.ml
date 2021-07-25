@@ -228,7 +228,7 @@ let%expect_test "Double Metaphone" =
   [%expect {| VALID (PRS PRS) |}];
   test "O'Hara";
   [%expect {| VALID (AR AR) |}];
-  (* Test cases added from initial algorithm implementation mismatches *)
+  (* Test cases added from algorithm development *)
   test "each";
   [%expect {| VALID (AK AK) |}];
   test "GLIA";
@@ -258,7 +258,19 @@ let%expect_test "Double Metaphone" =
   test "pas";
   [%expect {| VALID (PS PS) |}];
   test "faux pas";
-  [%expect {| VALID (FKSP FKSP) |}]
+  [%expect {| VALID (FKSP FKSP) |}];
+  test "chore";
+  [%expect {| VALID (XR XR) |}];
+  test "choreography";
+  [%expect {| VALID (XRKR XRKR) |}];
+  test "cocciuto";
+  [%expect {| VALID (KXT KXT) |}];
+  test "róngnà";
+  [%expect {| VALID (RNN RNKN) |}];
+  test "josef";
+  [%expect {| VALID (JSF HSF) |}];
+  test "sch";
+  [%expect {| VALID (X S) |}]
 
 let english = [%blob "english.txt"]
 
@@ -346,7 +358,7 @@ let%expect_test "In depth" =
   test_language english;
   [%expect {|
     100% matching, 58109 words.
-    Time: 1800ms |}];
+    Time: 1900ms |}];
   test_language french;
   [%expect {|
       100% matching, 22740 words.
@@ -356,9 +368,10 @@ let%expect_test "In depth" =
     100% matching, 8841 words.
     Time: 200ms |}]
 
-(* let%expect_test "Most common per language" =
+let%expect_test "Most common per language" =
   List.iter languages ~f:(fun lang -> test_language lang);
-  [%expect {|
+  [%expect
+    {|
     100% matching, 7052 words.
     Time: 200ms
     100% matching, 50000 words.
@@ -428,4 +441,4 @@ let%expect_test "In depth" =
     100% matching, 50000 words.
     Time: 1600ms
     100% matching, 10665 words.
-    Time: 300ms |}] *)
+    Time: 300ms |}]

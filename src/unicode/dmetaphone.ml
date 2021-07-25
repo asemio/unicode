@@ -12,10 +12,13 @@ let ( =* ) = String.( = )
 
 let ( <>* ) = String.( <> )
 
+(** One of these glyphs *)
 let ( =*| ) ~get_at pos arr = Array.mem arr (get_at pos) ~equal:[%equal: string]
 
+(** Not one of these glyphs *)
 let ( <>*| ) ~get_at pos arr = not (( =*| ) ~get_at pos arr)
 
+(** Matches this chain of glyphs *)
 let ( =*> ) ~glyphs =
   let len = Array.length glyphs in
   fun pos against ->
@@ -37,7 +40,7 @@ let get_at glyphs =
   let len = Array.length glyphs in
   (fun pos -> if pos < 0 || pos >= len then " " else Array.get glyphs pos)
 
-let string_at glyphs =
+let string_at ~glyphs =
   let len = Array.length glyphs in
   fun pos arr ->
     pos >= 0
@@ -55,16 +58,7 @@ let string_at glyphs =
          )
        )
 
-let is_vowel ~get_at pos =
-  match get_at pos with
-  | "A"
-   |"E"
-   |"I"
-   |"O"
-   |"U"
-   |"Y" ->
-    true
-  | _ -> false
+let is_vowel pos = pos =*| [| "A"; "E"; "I"; "O"; "U"; "Y" |]
 
 let slavo_germanic s =
   String.is_substring s ~substring:"W"
@@ -88,7 +82,7 @@ let double_metaphone ?(max_length = 4) ~standardized:original ~glyphs =
   let ( <>*| ) = ( <>*| ) ~get_at in
   let ( =*> ) = ( =*> ) ~glyphs in
   let is_vowel = is_vowel ~get_at in
-  let string_at = string_at glyphs in
+  let string_at = string_at ~glyphs in
   let is_slavo_germanic = lazy (slavo_germanic original) in
   let obvious_germanic = lazy (obvious_germanic ~string_at) in
   let primary = Buffer.create (max_length + 2) in
@@ -116,619 +110,798 @@ let double_metaphone ?(max_length = 4) ~standardized:original ~glyphs =
     add_both 'S';
     debug [%here];
     advance 1
+  | "W" :: "A" :: _
+   |"W" :: "E" :: _
+   |"W" :: "I" :: _
+   |"W" :: "O" :: _
+   |"W" :: "U" :: _
+   |"W" :: "Y" :: _ ->
+    (* L.1150 Wasserman should match Vasserman *)
+    add 'A' 'F'
+  | "W" :: "H" :: _ ->
+    (* L.1158 need Uomo to match Womo *)
+    add_both 'A'
   | _ -> ());
 
-  let rec loop i ll =
-    (match ll, i with
-    | "A" :: _, _
-     |"E" :: _, _
-     |"I" :: _, _
-     |"O" :: _, _
-     |"U" :: _, _
-     |"Y" :: _, _ ->
-      if i = 0 then add_both 'A';
+  let rec loop i triple =
+    (match triple with
+    | "A" :: _, [], _
+     |"E" :: _, [], _
+     |"I" :: _, [], _
+     |"O" :: _, [], _
+     |"U" :: _, [], _
+     |"Y" :: _, [], _ ->
+      add_both 'A';
       debug [%here];
       advance 1
-    | "B" :: "B" :: _, _ ->
+    | "A" :: _, _, _
+     |"E" :: _, _, _
+     |"I" :: _, _, _
+     |"O" :: _, _, _
+     |"U" :: _, _, _
+     |"Y" :: _, _, _ ->
+      debug [%here];
+      advance 1
+    | "B" :: "B" :: _, _, _ ->
       add_both 'P';
       debug [%here];
       advance 2
-    | "B" :: _, _ ->
+    | "B" :: _, _, _ ->
       (* L.290 "-mb", e.g "dumb", already skipped over... *)
       add_both 'P';
       debug [%here];
       advance 1
-    | "ç" :: _, _
-     |"Ç" :: _, _ ->
+    | "ç" :: _, _, _
+     |"Ç" :: _, _, _ ->
       add_both 'S';
       debug [%here];
       advance 1
-    | "C" :: _, _
-      when i > 1
-           && (not (is_vowel (i - 2)))
-           && i - 1 =*> [| "A"; "C"; "H" |]
+    | "C" :: "H" :: _, "A" :: _ :: _, _
+      when (not (is_vowel (i - 2)))
            && get_at (i + 2) <>* "I"
-           && (get_at (i + 2) <>* "E"
-              || string_at (i - 2)
-                   [| [| "B"; "A"; "C"; "H"; "E"; "R" |]; [| "M"; "A"; "C"; "H"; "E"; "R" |] |]
-              ) ->
+           && (get_at (i + 2) <>* "E" || (i - 2 =*| [| "B"; "M" |] && i + 2 =*> [| "E"; "R" |])) ->
       (* L. 307 various germanic *)
       add_both 'K';
       debug [%here];
       advance 2
-    | "C" :: "A" :: "E" :: "S" :: "A" :: "R" :: _, 0 ->
+    | "C" :: "A" :: "E" :: "S" :: "A" :: "R" :: _, [], _ ->
       (* L.322 special case 'caesar' *)
       add_both 'S';
       debug [%here];
       advance 2
-    | "C" :: "H" :: "I" :: "A" :: _, _ ->
+    | "C" :: "H" :: "A" :: "E" :: _, _ :: _, _ ->
+      (* L.343 find 'michael' *)
+      add 'K' 'X';
+      debug [%here];
+      advance 2
+    | "C" :: "H" :: "O" :: "R" :: "E" :: _, [], _ ->
+      add_both 'X';
+      debug [%here];
+      advance 2
+    | "C" :: "H" :: "A" :: "R" :: "A" :: "C" :: _, [], _
+     |"C" :: "H" :: "A" :: "R" :: "I" :: "S" :: _, [], _
+     |"C" :: "H" :: "O" :: "R" :: _, [], _
+     |"C" :: "H" :: "Y" :: "M" :: _, [], _
+     |"C" :: "H" :: "E" :: "M" :: _, [], _
+     |"C" :: "H" :: "I" :: "A" :: _, _, _ ->
       (* L.332 italian 'chianti' *)
       add_both 'K';
       debug [%here];
       advance 2
-    | "C" :: "H" :: _, _ ->
-      begin
-        match i > 0 with
-        | true when i + 2 =*> [| "A"; "E" |] ->
-          (* L.343 find 'michael' *)
-          debug [%here];
-          add 'K' 'X'
-        | false
-          when string_at (i + 2)
-                 [|
-                   [| "A"; "R"; "A"; "C" |];
-                   [| "A"; "R"; "I"; "S" |];
-                   [| "O"; "R" |];
-                   [| "Y"; "M" |];
-                   [| "I"; "A" |];
-                   [| "E"; "M" |];
-                 |]
-               && not (0 =*> [| "C"; "H"; "O"; "R"; "E" |]) ->
-          (* L.353 greek roots e.g. 'chemistry', 'chorus' *)
-          debug [%here];
-          add_both 'K'
-        | gtz
-          when (* L.367 germanic, greek, or otherwise 'ch' for 'kh' sound *)
-               force obvious_germanic
-               (* L.371 'architect but not 'arch', 'orchestra', 'orchid' *)
-               || string_at (i - 2)
-                    [|
-                      [| "O"; "R"; "C"; "H"; "E"; "S" |];
-                      [| "A"; "R"; "C"; "H"; "I"; "T" |];
-                      [| "O"; "R"; "C"; "H"; "I"; "D" |];
-                    |]
-               || i + 2 =*| [| "T"; "S" |]
-               || (i - 1 =*| [| "A"; "O"; "U"; "E" |] || not gtz)
-                  && (i + 2 =*| [| "L"; "R"; "N"; "M"; "B"; "H"; "F"; "V"; "W" |] || get_at (i + 2) =* " ")
-          ->
-          (* L.381 e.g., 'wachtler', 'wechsler', but not 'tichner' *)
-          debug [%here];
-          add_both 'K'
-        | true when 0 =*> [| "M"; "C" |] ->
-          (* L.396 e.g., "McHugh" *)
-          debug [%here];
-          add_both 'K'
-        | true ->
-          debug [%here];
-          add 'X' 'K'
-        | false ->
-          debug [%here];
-          add_both 'X'
-      end;
+    | "C" :: "H" :: "E" :: "S" :: _, "R" :: "O" :: _, _
+     |"C" :: "H" :: "I" :: "T" :: _, "R" :: "A" :: _, _
+     |"C" :: "H" :: "I" :: "D" :: _, "R" :: "O" :: _, _
+     |"C" :: "H" :: "T" :: _, _, _
+     |"C" :: "H" :: "S" :: _, _, _ ->
+      (* L.367 germanic, greek, or otherwise 'ch' for 'kh' sound *)
+      (* L.371 'architect but not 'arch', 'orchestra', 'orchid' *)
+      (* L.381 e.g., 'wachtler', 'wechsler', but not 'tichner' *)
+      add_both 'K';
       debug [%here];
       advance 2
-    | "C" :: "Z" :: _, _ when not (i - 2 =*> [| "W"; "I" |]) ->
+    | "C" :: "H" :: "L" :: _, _, _
+     |"C" :: "H" :: "R" :: _, _, _
+     |"C" :: "H" :: "N" :: _, _, _
+     |"C" :: "H" :: "M" :: _, _, _
+     |"C" :: "H" :: "B" :: _, _, _
+     |"C" :: "H" :: "H" :: _, _, _
+     |"C" :: "H" :: "F" :: _, _, _
+     |"C" :: "H" :: "V" :: _, _, _
+     |"C" :: "H" :: "W" :: _, _, _
+     |"C" :: "H" :: " " :: _, _, _
+     |[ "C"; "H" ], _, _
+      when i - 1 =*| [| "A"; "O"; "U"; "E" |] || i = 0 ->
+      add_both 'K';
+      debug [%here];
+      advance 2
+    | "C" :: "H" :: _, _, _ when force obvious_germanic ->
+      add_both 'K';
+      debug [%here];
+      advance 2
+    | "C" :: "H" :: _, _ :: _, "M" :: "C" :: _ ->
+      (* L.396 e.g., "McHugh" *)
+      add_both 'K';
+      debug [%here];
+      advance 2
+    | "C" :: "H" :: _, [], _ ->
+      add_both 'X';
+      debug [%here];
+      advance 2
+    | "C" :: "H" :: _, _ :: _, _ ->
+      add 'X' 'K';
+      debug [%here];
+      advance 2
+    | "C" :: "Z" :: _, "I" :: "W" :: _, _ ->
+      add_both 'K';
+      debug [%here];
+      advance 1
+    | "C" :: "Z" :: _, _, _ ->
       (* L.415  e.g, 'czerny' *)
       add 'S' 'X';
       debug [%here];
       advance 2
-    | "C" :: "C" :: "I" :: "A" :: _, _ ->
+    | "C" :: "C" :: "I" :: "A" :: _, _, _ ->
       (* L.425 e.g., 'focaccia' *)
       add_both 'X';
       debug [%here];
       advance 3
-    | "C" :: "C" :: _, _ when not (i = 1 && get_at 0 =* "M") -> (
-      (* L.434 double 'C', but not if e.g. 'McClellan' *)
-      match () with
-      | _ when i + 2 =*| [| "I"; "E"; "H" |] && not (i + 2 =*> [| "H"; "U" |]) ->
-        (* L.438 'bellocchio' but not 'bacchus' *)
-        if (i = 1 && get_at (i - 1) =* "A")
-           || string_at (i - 1) [| [| "U"; "C"; "C"; "E"; "E" |]; [| "U"; "C"; "C"; "E"; "S" |] |]
-        then (
-          (* L.442 'accident', 'accede' 'succeed' *)
-          add_both 'K';
-          add_both 'S'
-        )
-        else (* L.451 'bacci', 'bertucci', other italian *)
-          add_both 'X';
-        debug [%here];
-        advance 3
-      | _ ->
-        (* L.462 Pierce's rule *)
-        add_both 'K';
-        debug [%here];
-        advance 2
-    )
-    | "C" :: "K" :: _, _
-     |"C" :: "G" :: _, _
-     |"C" :: "Q" :: _, _ ->
+    | "C" :: "C" :: "E" :: _, [ "M" ], _
+     |"C" :: "C" :: "I" :: _, [ "M" ], _ ->
+      add_both 'K';
+      debug [%here];
+      advance 1
+    | "C" :: "C" :: _, [ "M" ], _ ->
       add_both 'K';
       debug [%here];
       advance 2
-    | "C" :: "I" :: "O" :: _, _
-     |"C" :: "I" :: "E" :: _, _
-     |"C" :: "I" :: "A" :: _, _ ->
+    | "C" :: "C" :: "H" :: "U" :: _, _, _ ->
+      add_both 'K';
+      debug [%here];
+      advance 2
+    | "C" :: "C" :: "I" :: _, [ "A" ], _
+     |"C" :: "C" :: "E" :: _, [ "A" ], _
+     |"C" :: "C" :: "H" :: _, [ "A" ], _
+     |"C" :: "C" :: "E" :: "E" :: _, "U" :: _, _
+     |"C" :: "C" :: "E" :: "S" :: _, "U" :: _, _ ->
+      (* L.438 'bellocchio' but not 'bacchus' *)
+      (* L.442 'accident', 'accede' 'succeed' *)
+      add_both 'K';
+      add_both 'S';
+      debug [%here];
+      advance 3
+    | "C" :: "C" :: "I" :: _, _, _
+     |"C" :: "C" :: "E" :: _, _, _
+     |"C" :: "C" :: "H" :: _, _, _ ->
+      (* L.451 'bacci', 'bertucci', other italian *)
+      add_both 'X';
+      debug [%here];
+      advance 3
+    | "C" :: "C" :: _, _, _ ->
+      (* L.462 Pierce's rule *)
+      add_both 'K';
+      debug [%here];
+      advance 2
+    | "C" :: "K" :: _, _, _
+     |"C" :: "G" :: _, _, _
+     |"C" :: "Q" :: _, _, _ ->
+      add_both 'K';
+      debug [%here];
+      advance 2
+    | "C" :: "I" :: "O" :: _, _, _
+     |"C" :: "I" :: "E" :: _, _, _
+     |"C" :: "I" :: "A" :: _, _, _ ->
       (* L.480 italian vs. english *)
       add 'S' 'X';
       debug [%here];
       advance 2
-    | "C" :: "I" :: _, _
-     |"C" :: "E" :: _, _
-     |"C" :: "Y" :: _, _ ->
+    | "C" :: "I" :: _, _, _
+     |"C" :: "E" :: _, _, _
+     |"C" :: "Y" :: _, _, _ ->
       add_both 'S';
       debug [%here];
       advance 2
-    | "C" :: _, _ ->
-      (* L.500 name sent in 'mac caffrey', 'mac gregor' *)
+    | "C" :: " " :: "C" :: _, _, _
+     |"C" :: " " :: "Q" :: _, _, _
+     |"C" :: " " :: "G" :: _, _, _ ->
+      (* L.500 nam, _e sent in 'mac caffrey', 'mac gregor' *)
       add_both 'K';
       debug [%here];
-      (match i + 1 with
-      | j when get_at j =* " " && j + 1 =*| [| "C"; "Q"; "G" |] -> 3
-      | j when j =*| [| "C"; "K"; "Q" |] && not (string_at j [| [| "C"; "E" |]; [| "C"; "I" |] |]) -> 2
-      | _ -> 1)
-      |> advance
-    | "D" :: "G" :: _, _ ->
-      if i + 2 =*| [| "I"; "E"; "Y" |]
-      then (
-        (* L.517 'edge' *)
-        add_both 'J';
-        debug [%here];
-        advance 3
-      )
-      else (
-        (* L.525 'edgar' *)
-        add_both 'T';
-        add_both 'K';
-        debug [%here];
-        advance 2
-      )
-    | "D" :: "T" :: _, _
-     |"D" :: "D" :: _, _ ->
+      advance 3
+    | "C" :: _, _, _ ->
+      add_both 'K';
+      debug [%here];
+      advance 1
+    | "D" :: "G" :: "I" :: _, _, _
+     |"D" :: "G" :: "E" :: _, _, _
+     |"D" :: "G" :: "Y" :: _, _, _ ->
+      (* L.517 'edge' *)
+      add_both 'J';
+      debug [%here];
+      advance 3
+    | "D" :: "G" :: _, _, _ ->
+      (* L.525 'edgar' *)
+      add_both 'T';
+      add_both 'K';
+      debug [%here];
+      advance 2
+    | "D" :: "T" :: _, _, _
+     |"D" :: "D" :: _, _, _ ->
       add_both 'T';
       debug [%here];
       advance 2
-    | "D" :: _, _ ->
+    | "D" :: _, _, _ ->
       add_both 'T';
       debug [%here];
       advance 1
-    | "F" :: "F" :: _, _ ->
+    | "F" :: "F" :: _, _, _ ->
       add_both 'F';
       debug [%here];
       advance 2
-    | "F" :: _, _ ->
+    | "F" :: _, _, _ ->
       add_both 'F';
       debug [%here];
       advance 1
-    | "G" :: "H" :: _, _ -> (
-      match i with
-      | i when i > 0 && not (is_vowel (i - 1)) ->
-        add_both 'K';
-        debug [%here];
-        advance 2
-      | 0 ->
-        (* L.569 'ghislane', ghiradelli *)
-        add_both (if get_at 2 =* "I" then 'J' else 'K');
-        debug [%here];
-        advance 2
-      | i
-        when (i > 1 && i - 2 =*| [| "B"; "H"; "D" |])
-             (* L.595 e.g., 'bough' *)
-             || (i > 2 && i - 3 =*| [| "B"; "H"; "D" |])
-             (* L.599 e.g., 'broughton' *)
-             || (i > 3 && i - 4 =*| [| "B"; "H" |]) ->
-        (* L.588 Parker's rule (with some further refinements) - e.g., 'hugh' *)
-        debug [%here];
-        advance 2
-      | i when i > 2 && get_at (i - 1) =* "U" && i - 3 =*| [| "C"; "G"; "L"; "R"; "T" |] ->
-        (* L.610  e.g., 'laugh', 'McLaughlin', 'cough', 'gough', * 'rough', 'tough' *)
-        add_both 'F';
-        debug [%here];
-        advance 2
-      | i when i > 0 && not (get_at (i - 1) =* "I") ->
-        add_both 'K';
-        debug [%here];
-        advance 2
-      | _ ->
-        debug [%here];
-        advance 2
-    )
-    | "G" :: "N" :: _, _ ->
-      (match i with
-      | 1 when is_vowel 0 && not (force is_slavo_germanic) ->
-        Buffer.add_char primary 'K';
-        add_both 'N'
-      | i
-        when (not (i + 2 =*> [| "E"; "Y" |]))
-             (* TODO: review this clause *)
-             && get_at (i + 1) <>* "Y"
-             && not (force is_slavo_germanic) ->
-        (* L.644 not e.g. 'cagney' *)
-        Buffer.add_char secondary 'K';
-        add_both 'N'
-      | _ ->
-        add_both 'K';
-        add_both 'N');
+    | "G" :: "H" :: _, _ :: _, _ when not (is_vowel (i - 1)) ->
+      add_both 'K';
       debug [%here];
       advance 2
-    | "G" :: "L" :: _, _ when get_at (i + 2) =* "I" && not (force is_slavo_germanic) ->
+    | "G" :: "H" :: "I" :: _, [], _ ->
+      add_both 'J';
+      debug [%here];
+      advance 2
+    | "G" :: "H" :: _, [], _ ->
+      (* L.569 'ghislane', ghiradelli *)
+      add_both 'K';
+      debug [%here];
+      advance 2
+    | "G" :: "H" :: _, _ :: "B" :: _, _
+     |"G" :: "H" :: _, _ :: "H" :: _, _
+     |"G" :: "H" :: _, _ :: "D" :: _, _
+     |"G" :: "H" :: _, _ :: _ :: "B" :: _, _
+     |"G" :: "H" :: _, _ :: _ :: "H" :: _, _
+     |"G" :: "H" :: _, _ :: _ :: "D" :: _, _
+     |"G" :: "H" :: _, _ :: _ :: _ :: "B" :: _, _
+     |"G" :: "H" :: _, _ :: _ :: _ :: "H" :: _, _ ->
+      (* L.588 Parker's rule (with some further refinements) - e.g., 'hugh' *)
+      debug [%here];
+      advance 2
+    | "G" :: "H" :: _, "U" :: _ :: "C" :: _, _
+     |"G" :: "H" :: _, "U" :: _ :: "G" :: _, _
+     |"G" :: "H" :: _, "U" :: _ :: "L" :: _, _
+     |"G" :: "H" :: _, "U" :: _ :: "R" :: _, _
+     |"G" :: "H" :: _, "U" :: _ :: "T" :: _, _ ->
+      (* L.610  e.g., 'laugh', 'McLaughlin', 'cough', 'gough', * 'rough', 'tough' *)
+      add_both 'F';
+      debug [%here];
+      advance 2
+    | "G" :: "H" :: _, "I" :: _, _ ->
+      debug [%here];
+      advance 2
+    | "G" :: "H" :: _, _ :: _, _ ->
+      add_both 'K';
+      debug [%here];
+      advance 2
+    | "G" :: "N" :: _, [ "A" ], _
+     |"G" :: "N" :: _, [ "E" ], _
+     |"G" :: "N" :: _, [ "I" ], _
+     |"G" :: "N" :: _, [ "O" ], _
+     |"G" :: "N" :: _, [ "U" ], _
+     |"G" :: "N" :: _, [ "Y" ], _
+      when not (force is_slavo_germanic) ->
+      Buffer.add_char primary 'K';
+      add_both 'N';
+      debug [%here];
+      advance 2
+    | "G" :: "N" :: "E" :: "Y" :: _, _, _ ->
+      add_both 'K';
+      add_both 'N';
+      debug [%here];
+      advance 2
+    | "G" :: "N" :: _, _, _ when force is_slavo_germanic ->
+      add_both 'K';
+      add_both 'N';
+      debug [%here];
+      advance 2
+    | "G" :: "N" :: _, _, _ ->
+      (* L.644 not e.g. 'cagney' *)
+      Buffer.add_char secondary 'K';
+      add_both 'N';
+      debug [%here];
+      advance 2
+    | "G" :: "L" :: "I" :: _, _, _ when not (force is_slavo_germanic) ->
       (* L.661 'tagliaro' *)
       Buffer.add_char primary 'K';
       add_both 'L';
       debug [%here];
       advance 2
-    | "G" :: next :: _, 0
-      when next =* "Y"
-           || string_at (i + 1)
-                [|
-                  [| "E"; "S" |];
-                  [| "E"; "P" |];
-                  [| "E"; "B" |];
-                  [| "E"; "L" |];
-                  [| "E"; "Y" |];
-                  [| "I"; "B" |];
-                  [| "I"; "L" |];
-                  [| "I"; "N" |];
-                  [| "I"; "E" |];
-                  [| "E"; "I" |];
-                  [| "E"; "R" |];
-                |] ->
+    | "G" :: "Y" :: _, [], _
+     |"G" :: "E" :: "S" :: _, [], _
+     |"G" :: "E" :: "P" :: _, [], _
+     |"G" :: "E" :: "B" :: _, [], _
+     |"G" :: "E" :: "L" :: _, [], _
+     |"G" :: "E" :: "Y" :: _, [], _
+     |"G" :: "I" :: "B" :: _, [], _
+     |"G" :: "I" :: "L" :: _, [], _
+     |"G" :: "I" :: "N" :: _, [], _
+     |"G" :: "I" :: "E" :: _, [], _
+     |"G" :: "E" :: "I" :: _, [], _
+     |"G" :: "E" :: "R" :: _, [], _ ->
       (* L.671 -ges-,-gep-,-gel-, -gie- at beginning *)
       add 'K' 'J';
       debug [%here];
       advance 2
-    | "G" :: "E" :: "R" :: _, _
-     |"G" :: "Y" :: _, _
-      when (not
-              (string_at 0
-                 [|
-                   [| "D"; "A"; "N"; "G"; "E"; "R" |];
-                   [| "R"; "A"; "N"; "G"; "E"; "R" |];
-                   [| "M"; "A"; "N"; "G"; "E"; "R" |];
-                 |]
-              )
-           )
-           && i - 1 <>*| [| "E"; "I" |]
-           && not (string_at (i - 1) [| [| "R"; "G"; "Y" |]; [| "O"; "G"; "Y" |] |]) ->
+    | "G" :: "E" :: "R" :: _, _, "D" :: "A" :: "N" :: "G" :: "E" :: "R" :: _
+     |"G" :: "E" :: "R" :: _, _, "R" :: "A" :: "N" :: "G" :: "E" :: "R" :: _
+     |"G" :: "E" :: "R" :: _, _, "M" :: "A" :: "N" :: "G" :: "E" :: "R" :: _
+     |"G" :: "E" :: "R" :: _, "E" :: _, _
+     |"G" :: "E" :: "R" :: _, "I" :: _, _ ->
+      add (if force obvious_germanic then 'K' else 'J') 'K';
+      debug [%here];
+      advance 2
+    | "G" :: "E" :: "R" :: _, _, _ ->
       (* L.684 -ger-,  -gy- *)
       add 'K' 'J';
       debug [%here];
       advance 2
-    | "G" :: _, _
-      when i + 1 =*| [| "E"; "I"; "Y" |]
-           || string_at (i - 1) [| [| "A"; "G"; "G"; "I" |]; [| "O"; "G"; "G"; "I" |] |] ->
-      (* L.700 italian e.g, 'biaggi' *)
-      (match () with
-      | _ when force obvious_germanic || i + 1 =*> [| "E"; "T" |] ->
-        (* L.705 obvious germanic *)
-        add_both 'K'
-      | _ when i + 1 =*> [| "I"; "E"; "R" |] && get_at (i + 4) =* " " ->
-        (* L.716 always soft if french ending *)
-        add_both 'J'
-      | _ -> add 'J' 'K');
+    | "G" :: "Y" :: _, _, "D" :: "A" :: "N" :: "G" :: "E" :: "R" :: _
+     |"G" :: "Y" :: _, _, "R" :: "A" :: "N" :: "G" :: "E" :: "R" :: _
+     |"G" :: "Y" :: _, _, "M" :: "A" :: "N" :: "G" :: "E" :: "R" :: _
+     |"G" :: "Y" :: _, "E" :: _, _
+     |"G" :: "Y" :: _, "I" :: _, _
+     |"G" :: "Y" :: _, "R" :: _, _
+     |"G" :: "Y" :: _, "O" :: _, _ ->
+      add (if force obvious_germanic then 'K' else 'J') 'K';
       debug [%here];
       advance 2
-    | "G" :: "G" :: _, _ ->
+    | "G" :: "Y" :: _, _, _ ->
+      (* L.684 -ger-,  -gy- *)
+      add 'K' 'J';
+      debug [%here];
+      advance 2
+    | "G" :: "E" :: "T" :: _, _, _ ->
       add_both 'K';
       debug [%here];
       advance 2
-    | "G" :: _, _ ->
+    | [ "G"; "I"; "E"; "R" ], _, _
+     |"G" :: "I" :: "E" :: "R" :: " " :: _, _, _ ->
+      (* L.716 always soft if french ending *)
+      add_both 'J';
+      debug [%here];
+      advance 2
+    | "G" :: "E" :: _, _, _
+     |"G" :: "I" :: _, _, _
+     |"G" :: "G" :: "I" :: _, "A" :: _, _
+     |"G" :: "G" :: "I" :: _, "O" :: _, _ ->
+      (* L.700 italian e.g, 'biaggi' *)
+      add (if force obvious_germanic then 'K' else 'J') 'K';
+      debug [%here];
+      advance 2
+    | "G" :: "G" :: _, _, _ ->
+      add_both 'K';
+      debug [%here];
+      advance 2
+    | "G" :: _, _, _ ->
       add_both 'K';
       debug [%here];
       advance 1
-    | "H" :: _, _ when (i = 0 || is_vowel (i - 1)) && is_vowel (i + 1) ->
+    | "H" :: _, [], _
+     |"H" :: _, "A" :: _, _
+     |"H" :: _, "E" :: _, _
+     |"H" :: _, "I" :: _, _
+     |"H" :: _, "O" :: _, _
+     |"H" :: _, "U" :: _, _
+     |"H" :: _, "Y" :: _, _
+      when is_vowel (i + 1) ->
       (* L.742 only keep if first & before vowel or btw. 2 vowels *)
       add_both 'H';
       debug [%here];
       advance 2
-    | "H" :: _, _ ->
+    | "H" :: _, _, _ ->
       (* L.751 also takes care of 'HH' *)
       debug [%here];
       advance 1
-    | "J" :: _, _ when i + 1 =*> [| "O"; "S"; "E" |] || 0 =*> [| "S"; "A"; "N"; " " |] ->
+    | "J" :: _, _, "S" :: "A" :: "N" :: " " :: _ ->
       (* L.756 obvious spanish, 'jose', 'san jacinto' *)
-      let p = if (i = 0 && get_at (i + 4) =* " ") || 0 =*> [| "S"; "A"; "N"; " " |] then 'H' else 'J' in
-      add p 'H';
+      add_both 'H';
       debug [%here];
       advance 1
-    | "J" :: _, _ ->
-      (match i with
-      | i when i = 0 && not (i + 1 =*> [| "O"; "S"; "E" |]) ->
-        (* L.779 Yankelovich/Jankelowicz *)
-        add 'J' 'A'
-      | i when is_vowel (i - 1) && (not (force is_slavo_germanic)) && i + 1 =*| [| "A"; "O" |] ->
-        (* L.784 spanish pron. of e.g. 'bajador' *)
-        add 'J' 'H'
-      | i when i = last -> Buffer.add_char primary 'J'
-      | i when i + 1 <>*| [| "L"; "T"; "K"; "S"; "N"; "M"; "B"; "Z" |] && i - 1 <>*| [| "S"; "K"; "L" |]
-        ->
-        add_both 'J'
-      | _ -> ());
+    | [ "J"; "O"; "S"; "E" ], [], _
+     |"J" :: "O" :: "S" :: "E" :: " " :: _, [], _ ->
+      (* L.756 obvious spanish, 'jose', 'san jacinto' *)
+      add_both 'H';
       debug [%here];
-      advance (if get_at (i + 1) =* "J" then 2 else 1)
-    | "K" :: "K" :: _, _ ->
+      advance 1
+    | "J" :: "O" :: "S" :: "E" :: _, _, _ ->
+      add 'J' 'H';
+      debug [%here];
+      advance 1
+    | "J" :: "J" :: _, [], _ ->
+      add 'J' 'A';
+      debug [%here];
+      advance 2
+    | "J" :: _, [], _ ->
+      (* L.779 Yankelovich/Jankelowicz *)
+      add 'J' 'A';
+      debug [%here];
+      advance 1
+    | [ "J" ], _, _ ->
+      Buffer.add_char primary 'J';
+      debug [%here];
+      advance 1
+    | "J" :: "A" :: _, _, _
+     |"J" :: "O" :: _, _, _
+      when is_vowel (i - 1) && not (force is_slavo_germanic) ->
+      (* L.784 spanish pron. of e.g. 'bajador' *)
+      add 'J' 'H';
+      debug [%here];
+      advance 1
+    | "J" :: "J" :: _, "S" :: _, _
+     |"J" :: "J" :: _, "K" :: _, _
+     |"J" :: "J" :: _, "L" :: _, _ ->
+      debug [%here];
+      advance 2
+    | "J" :: "L" :: _, _, _
+     |"J" :: "T" :: _, _, _
+     |"J" :: "K" :: _, _, _
+     |"J" :: "S" :: _, _, _
+     |"J" :: "N" :: _, _, _
+     |"J" :: "M" :: _, _, _
+     |"J" :: "B" :: _, _, _
+     |"J" :: "Z" :: _, _, _
+     |"J" :: _, "S" :: _, _
+     |"J" :: _, "K" :: _, _
+     |"J" :: _, "L" :: _, _ ->
+      debug [%here];
+      advance 1
+    | "J" :: "J" :: _, _, _ ->
+      add_both 'J';
+      debug [%here];
+      advance 2
+    | "J" :: _, _, _ ->
+      add_both 'J';
+      debug [%here];
+      advance 1
+    | "K" :: "K" :: _, _, _ ->
       add_both 'K';
       debug [%here];
       advance 2
-    | "K" :: _, _ ->
+    | "K" :: _, _, _ ->
       add_both 'K';
       debug [%here];
       advance 1
-    | "L" :: "L" :: _, _
-      when i = Array.length glyphs - 3
-           && string_at (i - 1)
-                [| [| "I"; "L"; "L"; "O" |]; [| "I"; "L"; "L"; "A" |]; [| "A"; "L"; "L"; "E" |] |]
-           || (string_at (last - 1) [| [| "A"; "S" |]; [| "O"; "S" |] |] || last =*| [| "A"; "O" |])
-              && i - 1 =*> [| "A"; "L"; "L"; "E" |] ->
+    | [ "L"; "L"; "O" ], "I" :: _, _
+     |[ "L"; "L"; "A" ], "I" :: _, _
+     |[ "L"; "L"; "E" ], "A" :: _, _ ->
       (* L.832 spanish e.g. 'cabrillo', 'gallegos' *)
       Buffer.add_char primary 'L';
       debug [%here];
       advance 2
-    | "L" :: "L" :: _, _ ->
+    | "L" :: "L" :: "E" :: _, "A" :: _, _
+      when (last - 1 =*| [| "A"; "O" |] && get_at last =* "S") || last =*| [| "A"; "O" |] ->
+      (* L.832 spanish e.g. 'cabrillo', 'gallegos' *)
+      Buffer.add_char primary 'L';
+      debug [%here];
+      advance 2
+    | "L" :: "L" :: _, _, _ ->
       add_both 'L';
       debug [%here];
       advance 2
-    | "L" :: _, _ ->
+    | "L" :: _, _, _ ->
       add_both 'L';
       debug [%here];
       advance 1
-    | "M" :: _, _ ->
+    | [ "M"; "B" ], "U" :: _, _
+     |"M" :: "B" :: "E" :: "R" :: _, "U" :: _, _
+     |"M" :: "M" :: _, _, _ ->
       add_both 'M';
       debug [%here];
-      advance
-        ( if i - 1 =*> [| "U"; "M"; "B" |]
-             (* L.858 'dumb','thumb' *)
-             && (i + 1 = last || i + 2 =*> [| "E"; "R" |])
-             || get_at (i + 1) =* "M"
-        then 2
-        else 1
-        )
-    | "N" :: "N" :: _, _ ->
+      advance 2
+    | "M" :: _, _, _ ->
+      add_both 'M';
+      debug [%here];
+      advance 1
+    | "N" :: "N" :: _, _, _ ->
       add_both 'N';
       debug [%here];
       advance 2
-    | "N" :: _, _ ->
+    | "N" :: _, _, _ ->
       add_both 'N';
       debug [%here];
       advance 1
-    | "ñ" :: _, _
-     |"Ñ" :: _, _ ->
+    | "ñ" :: _, _, _
+     |"Ñ" :: _, _, _ ->
       add_both 'N';
       debug [%here];
       advance 1
-    | "P" :: "H" :: _, _ ->
+    | "P" :: "H" :: _, _, _ ->
       add_both 'F';
       debug [%here];
       advance 2
-    | "P" :: "P" :: _, _
-     |"P" :: "B" :: _, _ ->
+    | "P" :: "P" :: _, _, _
+     |"P" :: "B" :: _, _, _ ->
       (* L.891 also account for "campbell", "raspberry" *)
       add_both 'P';
       debug [%here];
       advance 2
-    | "P" :: _, _ ->
+    | "P" :: _, _, _ ->
       add_both 'P';
       debug [%here];
       advance 1
-    | "Q" :: "Q" :: _, _ ->
+    | "Q" :: "Q" :: _, _, _ ->
       add_both 'K';
       debug [%here];
       advance 2
-    | "Q" :: _, _ ->
+    | "Q" :: _, _, _ ->
       add_both 'K';
       debug [%here];
       advance 1
-    | "R" :: _, _ ->
-      if not
-           (i = last
-           && (not (force is_slavo_germanic))
-           && i - 2 =*> [| "I"; "E" |]
-           && not (string_at (i - 4) [| [| "M"; "E" |]; [| "M"; "A" |] |])
-           )
-      then (* L.910 french e.g. 'rogier', but exclude 'hochmeier' *)
-        Buffer.add_char primary 'R';
+    | [ "R" ], "E" :: "I" :: "E" :: "M" :: _, _
+     |[ "R" ], "E" :: "I" :: "A" :: "M" :: _, _ ->
+      add_both 'R';
+      debug [%here];
+      advance 1
+    | [ "R" ], "E" :: "I" :: _, _ when not (force is_slavo_germanic) ->
+      (* L.910 french e.g. 'rogier', but exclude 'hochmeier' *)
       Buffer.add_char secondary 'R';
       debug [%here];
       advance (if get_at (i + 1) =* "R" then 2 else 1)
-    | "S" :: "L" :: _, _ when i - 1 =*| [| "I"; "Y" |] ->
+    | "R" :: "R" :: _, _, _ ->
+      add_both 'R';
+      debug [%here];
+      advance 2
+    | "R" :: _, _, _ ->
+      add_both 'R';
+      debug [%here];
+      advance 1
+    | "S" :: "L" :: _, "I" :: _, _
+     |"S" :: "L" :: _, "Y" :: _, _ ->
       (* L.932 special cases 'island', 'isle', 'carlisle', 'carlysle' *)
       debug [%here];
       advance 1
-    | "S" :: "U" :: "G" :: "A" :: "R" :: _, 0 ->
+    | "S" :: "U" :: "G" :: "A" :: "R" :: _, [], _ ->
       (* L.939 special case 'sugar-' *)
       add 'X' 'S';
       debug [%here];
       advance 1
-    | "S" :: "H" :: _, _ ->
-      (* L.951 germanic *)
-      add_both
-        ( if string_at (i + 2)
-               [| [| "E"; "I"; "M" |]; [| "O"; "E"; "K" |]; [| "O"; "L"; "M" |]; [| "O"; "L"; "Z" |] |]
-        then 'S'
-        else 'X'
-        );
+    | "S" :: "H" :: "E" :: "I" :: "M" :: _, _, _
+     |"S" :: "H" :: "O" :: "E" :: "K" :: _, _, _
+     |"S" :: "H" :: "O" :: "L" :: "M" :: _, _, _
+     |"S" :: "H" :: "O" :: "L" :: "Z" :: _, _, _ ->
+      add_both 'S';
       debug [%here];
       advance 2
-    | "S" :: "I" :: "O" :: _, _
-     |"S" :: "I" :: "A" :: _, _ ->
+    | "S" :: "H" :: _, _, _ ->
+      (* L.951 germanic *)
+      add_both 'X';
+      debug [%here];
+      advance 2
+    | "S" :: "I" :: "O" :: _, _, _
+     |"S" :: "I" :: "A" :: _, _, _ ->
       (* L.968 italian & armenian *)
       add 'S' (if not (force is_slavo_germanic) then 'X' else 'S');
       debug [%here];
       advance 3
-    | "S" :: "M" :: _, 0
-     |"S" :: "N" :: _, 0
-     |"S" :: "L" :: _, 0
-     |"S" :: "W" :: _, 0
-     |"S" :: "Z" :: _, _ ->
+    | "S" :: "M" :: _, [], _
+     |"S" :: "N" :: _, [], _
+     |"S" :: "L" :: _, [], _
+     |"S" :: "W" :: _, [], _ ->
       (* L.987 german & anglicisations, e.g. 'smith' match 'schmidt',
          'snider' match 'schneider' also, -sz- in slavic language
          although in hungarian it is pronounced 's' *)
       add 'S' 'X';
       debug [%here];
-      advance (if get_at (i + 1) =* "Z" then 2 else 1)
-    | "S" :: "C" :: _, _ -> (
-      (* L.1007 Schlesinger's rule *)
-      match i with
-      | i when get_at (i + 2) =* "H" ->
-        (* L.1010 dutch origin, e.g. 'school', 'schooner' *)
-        (match
-           string_at (i + 3)
-             [|
-               [| "O"; "O" |];
-               [| "E"; "R" |];
-               [| "E"; "N" |];
-               [| "U"; "Y" |];
-               [| "E"; "D" |];
-               [| "E"; "M" |];
-             |]
-         with
-        | true ->
-          if string_at (i + 3) [| [| "E"; "R" |]; [| "E"; "N" |] |]
-          then (* L.1015 'schermerhorn', 'schenker' *)
-            Buffer.add_char primary 'X'
-          else Buffer.add_string primary "SK";
-          Buffer.add_string secondary "SK"
-        | false ->
-          let s = if i = 0 && (not (is_vowel 3)) && get_at 3 <>* "W" then 'S' else 'X' in
-          add 'X' s);
-        debug [%here];
-        advance 3
-      | i when i + 2 =*| [| "I"; "E"; "Y" |] ->
-        add_both 'S';
-        debug [%here];
-        advance 3
-      | _ ->
-        add_both 'S';
-        add_both 'K';
-        debug [%here];
-        advance 3
-    )
-    | "S" :: _, _ ->
-      if i = last && string_at (i - 2) [| [| "A"; "I" |]; [| "O"; "I" |] |]
-      then (* L.1063 french e.g. 'resnais', 'artois' *)
-        Buffer.add_char secondary 'S'
-      else add_both 'S';
+      advance 1
+    | "S" :: "Z" :: _, _, _ ->
+      add 'S' 'X';
       debug [%here];
-      advance (if i + 1 =*| [| "S"; "Z" |] then 2 else 1)
-    | "T" :: "I" :: "O" :: "N" :: _, _
-     |"T" :: "I" :: "A" :: _, _
-     |"T" :: "C" :: "H" :: _, _ ->
+      advance 2
+    | "S" :: "C" :: "H" :: "E" :: "R" :: _, _, _
+     |"S" :: "C" :: "H" :: "E" :: "N" :: _, _, _ ->
+      (* L.1015 'schermerhorn', 'schenker' *)
+      Buffer.add_char primary 'X';
+      Buffer.add_string secondary "SK";
+      debug [%here];
+      advance 3
+    | "S" :: "C" :: "H" :: "O" :: "O" :: _, _, _
+     |"S" :: "C" :: "H" :: "U" :: "Y" :: _, _, _
+     |"S" :: "C" :: "H" :: "E" :: "D" :: _, _, _
+     |"S" :: "C" :: "H" :: "E" :: "M" :: _, _, _ ->
+      (* L.1007 Schlesinger's rule *)
+      (* L.1010 dutch origin, e.g. 'school', 'schooner' *)
+      add_both 'S';
+      add_both 'K';
+      debug [%here];
+      advance 3
+    | "S" :: "C" :: "H" :: _, _ :: _, _
+     |"S" :: "C" :: "H" :: "A" :: _, _, _
+     |"S" :: "C" :: "H" :: "E" :: _, _, _
+     |"S" :: "C" :: "H" :: "I" :: _, _, _
+     |"S" :: "C" :: "H" :: "O" :: _, _, _
+     |"S" :: "C" :: "H" :: "U" :: _, _, _
+     |"S" :: "C" :: "H" :: "Y" :: _, _, _
+     |"S" :: "C" :: "H" :: "W" :: _, _, _ ->
       add_both 'X';
       debug [%here];
       advance 3
-    | "T" :: "H" :: _, _
-     |"T" :: "T" :: "H" :: _, _ ->
-      let p =
-        (* L.1102 special case 'thomas', 'thames' or germanic *)
-        if string_at (i + 2) [| [| "O"; "M" |]; [| "A"; "M" |] |] || force obvious_germanic
-        then 'T'
-        else '0'
-      in
-      add p 'T';
+    | "S" :: "C" :: "H" :: _, _, _ ->
+      add 'X' 'S';
+      debug [%here];
+      advance 3
+    | "S" :: "C" :: "I" :: _, _, _
+     |"S" :: "C" :: "E" :: _, _, _
+     |"S" :: "C" :: "Y" :: _, _, _ ->
+      add_both 'S';
+      debug [%here];
+      advance 3
+    | "S" :: "C" :: _, _, _ ->
+      add_both 'S';
+      add_both 'K';
+      debug [%here];
+      advance 3
+    | [ "S" ], "I" :: "A" :: _, _
+     |[ "S" ], "I" :: "O" :: _, _ ->
+      (* L.1063 french e.g. 'resnais', 'artois' *)
+      Buffer.add_char secondary 'S';
+      debug [%here];
+      advance 1
+    | "S" :: "S" :: _, _, _ ->
+      add_both 'S';
       debug [%here];
       advance 2
-    | "T" :: "T" :: _, _
-     |"T" :: "D" :: _, _ ->
+    | "S" :: _, _, _ ->
+      add_both 'S';
+      debug [%here];
+      advance 1
+    | "T" :: "I" :: "O" :: "N" :: _, _, _
+     |"T" :: "I" :: "A" :: _, _, _
+     |"T" :: "C" :: "H" :: _, _, _ ->
+      add_both 'X';
+      debug [%here];
+      advance 3
+    | "T" :: "H" :: "O" :: "M" :: _, _, _
+     |"T" :: "H" :: "A" :: "M" :: _, _, _ ->
+      (* L.1102 special case 'thomas', 'thames' or germanic *)
       add_both 'T';
       debug [%here];
       advance 2
-    | "T" :: _, _ ->
+    | "T" :: "H" :: _, _, _
+     |"T" :: "T" :: "H" :: _, _, _ ->
+      add (if force obvious_germanic then 'T' else '0') 'T';
+      debug [%here];
+      advance 2
+    | "T" :: "T" :: _, _, _
+     |"T" :: "D" :: _, _, _ ->
+      add_both 'T';
+      debug [%here];
+      advance 2
+    | "T" :: _, _, _ ->
       add_both 'T';
       debug [%here];
       advance 1
-    | "V" :: "V" :: _, _ ->
+    | "V" :: "V" :: _, _, _ ->
       add_both 'F';
       debug [%here];
       advance 2
-    | "V" :: _, _ ->
+    | "V" :: _, _, _ ->
       add_both 'F';
       debug [%here];
       advance 1
-    | "W" :: "R" :: _, _ ->
+    | "W" :: "R" :: _, _, _ ->
       (* L.1137 can also be in middle of word *)
       add_both 'R';
       debug [%here];
       advance 2
-    | "W" :: _, _ -> (
-      (match i = 0 && (is_vowel (i + 1) || get_at (i + 1) =* "H"), is_vowel (i + 1) with
-      | true, true ->
-        (* L.1150 Wasserman should match Vasserman *)
-        add 'A' 'F'
-      | true, false ->
-        (* L.1158 need Uomo to match Womo *)
-        add_both 'A'
-      | false, _ -> ());
-      match i with
-      | i
-        when (i = last && is_vowel (i - 1))
-             || string_at (i - 1)
-                  [|
-                    [| "E"; "W"; "S"; "K"; "I" |];
-                    [| "E"; "W"; "S"; "K"; "Y" |];
-                    [| "O"; "W"; "S"; "K"; "I" |];
-                    [| "O"; "W"; "S"; "K"; "Y" |];
-                  |]
-             || 0 =*> [| "S"; "C"; "H" |] ->
-        (* L.1164 Arnow should match Arnoff *)
-        Buffer.add_char secondary 'F';
-        debug [%here];
-        advance 1
-      | i when string_at (i + 1) [| [| "I"; "C"; "Z" |]; [| "I"; "T"; "Z" |] |] ->
-        (* L.1176 polish e.g. 'filipowicz' *)
-        Buffer.add_string primary "TS";
-        Buffer.add_string secondary "FX";
-        debug [%here];
-        advance 4
-      | _ ->
-        (* L.1185 else skip it *)
-        debug [%here];
-        advance 1
-    )
-    | "X" :: _, _ ->
-      if not (i = last && string_at (i - 2) [| [| "A"; "U" |]; [| "O"; "U" |] |])
-      then (
-        (* L.1190 french e.g. breaux *)
-        Buffer.add_string primary "KS";
-        Buffer.add_string secondary "KS"
-      );
+    | [ "W" ], "A" :: _, _
+     |[ "W" ], "E" :: _, _
+     |[ "W" ], "I" :: _, _
+     |[ "W" ], "O" :: _, _
+     |[ "W" ], "U" :: _, _
+     |[ "W" ], "Y" :: _, _ ->
+      Buffer.add_char secondary 'F';
       debug [%here];
-      advance (if i + 1 =*| [| "C"; "X" |] then 2 else 1)
-    | "Z" :: "H" :: _, _ ->
+      advance 1
+    | "W" :: "S" :: "K" :: "I" :: _, "E" :: _, _
+     |"W" :: "S" :: "K" :: "Y" :: _, "E" :: _, _
+     |"W" :: "S" :: "K" :: "I" :: _, "O" :: _, _
+     |"W" :: "S" :: "K" :: "Y" :: _, "O" :: _, _
+     |"W" :: _, _, "S" :: "C" :: "H" :: _ ->
+      (* L.1164 Arnow should match Arnoff *)
+      Buffer.add_char secondary 'F';
+      debug [%here];
+      advance 1
+    | "W" :: "I" :: "C" :: "Z" :: _, _, _
+     |"W" :: "I" :: "T" :: "Z" :: _, _, _ ->
+      (* L.1176 polish e.g. 'filipowicz' *)
+      Buffer.add_string primary "TS";
+      Buffer.add_string secondary "FX";
+      debug [%here];
+      advance 4
+    | "W" :: _, _, _ ->
+      (* L.1185 else skip it *)
+      debug [%here];
+      advance 1
+    | [ "X" ], "U" :: "O" :: _, _
+     |[ "X" ], "U" :: "A" :: _, _ ->
+      debug [%here];
+      advance 1
+    | "X" :: "C" :: _, _, _
+     |"X" :: "X" :: _, _, _ ->
+      (* L.1190 french e.g. breaux *)
+      Buffer.add_string primary "KS";
+      Buffer.add_string secondary "KS";
+      debug [%here];
+      advance 2
+    | "X" :: _, _, _ ->
+      Buffer.add_string primary "KS";
+      Buffer.add_string secondary "KS";
+      debug [%here];
+      advance 1
+    | "Z" :: "H" :: _, _, _ ->
       (* L.1209 chinese pinyin e.g. 'zhao' *)
       add_both 'J';
       debug [%here];
       advance 2
-    | "Z" :: _, _ ->
-      if string_at (i + 1) [| [| "Z"; "O" |]; [| "Z"; "I" |]; [| "Z"; "A" |] |]
-         || (force is_slavo_germanic && i > 0 && not (get_at (i - 1) =* "T"))
-      then Buffer.add_char secondary 'T';
+    | "Z" :: "Z" :: "O" :: _, _, _
+     |"Z" :: "Z" :: "I" :: _, _, _
+     |"Z" :: "Z" :: "A" :: _, _, _ ->
+      Buffer.add_char secondary 'T';
       add_both 'S';
       debug [%here];
-      advance (if get_at (i + 1) =* "Z" then 2 else 1)
-    | _ :: _, _ ->
+      advance 2
+    | "Z" :: "Z" :: _, "T" :: _, _ ->
+      add_both 'S';
+      debug [%here];
+      advance 2
+    | "Z" :: _, "T" :: _, _ ->
+      add_both 'S';
       debug [%here];
       advance 1
-    | [], _ -> ());
+    | "Z" :: "Z" :: _, _ :: _, _ when force is_slavo_germanic ->
+      Buffer.add_char secondary 'T';
+      add_both 'S';
+      debug [%here];
+      advance 2
+    | "Z" :: _, _ :: _, _ when force is_slavo_germanic ->
+      Buffer.add_char secondary 'T';
+      add_both 'S';
+      debug [%here];
+      advance 1
+    | "Z" :: "Z" :: _, _, _ ->
+      add_both 'S';
+      debug [%here];
+      advance 2
+    | "Z" :: _, _, _ ->
+      add_both 'S';
+      debug [%here];
+      advance 1
+    | _ :: _, _, _ ->
+      debug [%here];
+      advance 1
+    | [], _, _ -> ());
     match
       (Buffer.length primary < max_length || Buffer.length secondary < max_length)
       && !current < Array.length glyphs
     with
-    | true -> List.drop ll (!current - i) |> loop !current
+    | true ->
+      Fn.apply_n_times ~n:(!current - i)
+        (function
+          | ([], _, _) as acc -> acc
+          | x :: rest, dropped, ll -> rest, x :: dropped, ll)
+        triple
+      |> loop !current
     | false -> ()
   in
 
   match original with
   | "" -> "", ""
   | _ ->
-    List.drop ll !current |> loop !current;
+    let triple =
+      Fn.apply_n_times ~n:!current
+        (function
+          | ([], _, _) as acc -> acc
+          | x :: rest, dropped, ll -> rest, x :: dropped, ll)
+        (ll, [], ll)
+    in
+    loop !current triple;
     let finalize b = Buffer.To_string.sub b ~pos:0 ~len:(min max_length (Buffer.length b)) in
     finalize primary, finalize secondary
