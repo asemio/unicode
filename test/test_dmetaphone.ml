@@ -278,7 +278,9 @@ let%expect_test "Double Metaphone" =
   test "ache";
   [%expect {| VALID (AX AK) |}];
   test "achy";
-  [%expect {| VALID (AX AK) |}]
+  [%expect {| VALID (AX AK) |}];
+  test "schutzzauber";
+  [%expect {| VALID (XTSP XTTS) |}]
 
 let english = [%blob "english.txt"]
 
