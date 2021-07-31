@@ -58,8 +58,6 @@ let double_metaphone ?(max_length = 4) ~standardized:original ~glyphs =
   (* It's not safe to index into the original string because ç and ñ are multibyte *)
   let glyphs_ll = Array.to_list glyphs in
   let glyphs_rev = lazy (Array.fold glyphs ~init:[] ~f:(fun acc x -> x :: acc)) in
-  let get_at = get_at glyphs in
-  let ( =* ) = ( =* ) ~glyphs in
   let is_obvious_germanic = lazy (obvious_germanic glyphs_ll) in
   let primary = Buffer.create (max_length + 2) in
   let secondary = Buffer.create (max_length + 2) in
@@ -69,7 +67,7 @@ let double_metaphone ?(max_length = 4) ~standardized:original ~glyphs =
   in
   let add_both c = add c c in
 
-  let rec loop i ((pair, _, _, is_slavo_germanic) as pattern) =
+  let rec loop i ((((next, _) as pair), starts_with, _, is_slavo_germanic) as pattern) =
     let advance =
       match pattern with
       | ("A" :: _, []), _, _, _
@@ -103,10 +101,69 @@ let double_metaphone ?(max_length = 4) ~standardized:original ~glyphs =
         add_both 'S';
         debug [%here];
         1
-      | ("C" :: "H" :: _, "A" :: prev :: _), _, _, _
-        when (not (is_vowel prev))
-             && get_at (i + 2) <>* "I"
-             && (get_at (i + 2) <>* "E" || ((i - 2 =* "B" || i - 2 =* "M") && i + 3 =* "R")) ->
+      | ("C" :: "H" :: "E" :: "R" :: _, "A" :: "M" :: _), _, _, _
+       |("C" :: "H" :: "E" :: "R" :: _, "A" :: "B" :: _), _, _, _ ->
+        add_both 'K';
+        debug [%here];
+        2
+      | ("C" :: "H" :: _, "A" :: "A" :: _), _, _, _
+       |("C" :: "H" :: _, "A" :: "E" :: _), _, _, _
+       |("C" :: "H" :: _, "A" :: "I" :: _), _, _, _
+       |("C" :: "H" :: _, "A" :: "O" :: _), _, _, _
+       |("C" :: "H" :: _, "A" :: "U" :: _), _, _, _
+       |("C" :: "H" :: _, "A" :: "Y" :: _), _, _, _
+       |("C" :: "H" :: "I" :: _, "A" :: _ :: _), _, _, _
+       |("C" :: "H" :: "E" :: _, "A" :: _ :: _), _, _, _ -> (
+        match next, starts_with with
+        | _ :: _ :: "A" :: "E" :: _, _ ->
+          (* L.343 find 'michael' *)
+          add 'K' 'X';
+          debug [%here];
+          2
+        | _ :: _ :: "I" :: "A" :: _, _ ->
+          (* L.332 italian 'chianti' *)
+          add_both 'K';
+          debug [%here];
+          2
+        | _ :: _ :: "T" :: _, _
+         |_ :: _ :: "S" :: _, _ ->
+          (* L.367 germanic, greek, or otherwise 'ch' for 'kh' sound *)
+          (* L.371 'architect but not 'arch', 'orchestra', 'orchid' *)
+          (* L.381 e.g., 'wachtler', 'wechsler', but not 'tichner' *)
+          add_both 'K';
+          debug [%here];
+          2
+        | _ :: _ :: "L" :: _, _
+         |_ :: _ :: "R" :: _, _
+         |_ :: _ :: "N" :: _, _
+         |_ :: _ :: "M" :: _, _
+         |_ :: _ :: "B" :: _, _
+         |_ :: _ :: "H" :: _, _
+         |_ :: _ :: "F" :: _, _
+         |_ :: _ :: "V" :: _, _
+         |_ :: _ :: "W" :: _, _
+         |_ :: _ :: " " :: _, _
+         |[ "C"; "H" ], _ ->
+          add_both 'K';
+          debug [%here];
+          2
+        | _, "V" :: "A" :: "N" :: " " :: _
+         |_, "V" :: "O" :: "N" :: " " :: _
+         |_, "S" :: "C" :: "H" :: _ ->
+          add_both 'K';
+          debug [%here];
+          2
+        | _, "M" :: "C" :: _ ->
+          (* L.396 e.g., "McHugh" *)
+          add_both 'K';
+          debug [%here];
+          2
+        | _ ->
+          add 'X' 'K';
+          debug [%here];
+          2
+      )
+      | ("C" :: "H" :: _, "A" :: _ :: _), _, _, _ ->
         (* L. 307 various germanic *)
         add_both 'K';
         debug [%here];

@@ -274,7 +274,11 @@ let%expect_test "Double Metaphone" =
   test "chvil";
   [%expect {| VALID (KFL KFL) |}];
   test "ghi";
-  [%expect {| VALID (J J) |}]
+  [%expect {| VALID (J J) |}];
+  test "ache";
+  [%expect {| VALID (AX AK) |}];
+  test "achy";
+  [%expect {| VALID (AX AK) |}]
 
 let english = [%blob "english.txt"]
 
@@ -362,11 +366,11 @@ let%expect_test "In depth" =
   test_language english;
   [%expect {|
     100% matching, 58109 words.
-    Time: 2100ms |}];
+    Time: 1800ms |}];
   test_language french;
   [%expect {|
       100% matching, 22740 words.
-      Time: 700ms |}];
+      Time: 600ms |}];
   test_language pinyin;
   [%expect {|
     100% matching, 8841 words.
