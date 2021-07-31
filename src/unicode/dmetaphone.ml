@@ -23,21 +23,15 @@ let obvious_germanic = function
   true
 | _ -> false
 
-let prepare ~n arg =
-  let rec loop = function
-    | 0, acc
-     |_, (([], _) as acc) ->
-      acc
-    | i, (x :: rest, dropped) -> loop (i - 1, (rest, x :: dropped))
-  in
-  loop (n, arg)
+let rec prepare = function
+| 0, acc
+ |_, (([], _) as acc) ->
+  acc
+| i, (x :: rest, dropped) -> prepare (i - 1, (rest, x :: dropped))
 
 let double_metaphone ?(max_length = 4) ~glyphs ~num_glyphs =
-  let debug (here : Source_code_position.t) =
-    if false then print_endline (sprintf "[%d]" here.pos_lnum)
-  in
-  (* original: AMELIE *)
-  (* glyphs: [| 'A'; 'M'; 'E'; 'L'; 'I'; 'E' |] *)
+  (* let debug (here : Source_code_position.t) = print_endline (sprintf "[%d]" here.pos_lnum) in *)
+  let debug _ = () in
   (* It's not safe to index into the original string because ç and ñ are multibyte *)
   let is_obvious_germanic = lazy (obvious_germanic glyphs) in
   let primary = Buffer.create (max_length + 2) in
@@ -865,7 +859,7 @@ let double_metaphone ?(max_length = 4) ~glyphs ~num_glyphs =
       && next_pos < num_glyphs
     with
     | true ->
-      let pair = prepare ~n:advance pair in
+      let pair = prepare (advance, pair) in
       loop next_pos (pair, starts_with, glyphs_rev, is_slavo_germanic)
     | false -> ()
   in
@@ -896,7 +890,7 @@ let double_metaphone ?(max_length = 4) ~glyphs ~num_glyphs =
       0
     | _ -> 0
   in
-  let pair = prepare ~n:start_pos (glyphs, []) in
+  let pair = prepare (start_pos, (glyphs, [])) in
   (pair, glyphs, List.rev glyphs, slavo_germanic glyphs) |> loop start_pos;
   let finalize b = Buffer.To_string.sub b ~pos:0 ~len:(min max_length (Buffer.length b)) in
   finalize primary, finalize secondary
