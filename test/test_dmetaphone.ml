@@ -385,6 +385,50 @@ let%expect_test "In depth" =
     100% matching, 7052 words.
     Time: 200ms
     100% matching, 50000 words.
+    Time: 1700ms
+    100% matching, 50000 words.
+    Time: 1600ms
+    100% matching, 50000 words.
+    Time: 1700ms
+    100% matching, 50000 words.
+    Time: 1700ms
+    100% matching, 50000 words.
+    Time: 1700ms
+    100% matching, 50000 words.
+    Time: 1600ms
+    100% matching, 50000 words.
+    Time: 1600ms
+    100% matching, 50000 words.
+    Time: 1600ms
+    100% matching, 50000 words.
+    Time: 1600ms
+    100% matching, 50000 words.
+    Time: 1600ms
+    100% matching, 50000 words.
+    Time: 1600ms
+    100% matching, 50000 words.
+    Time: 1600ms
+    100% matching, 50000 words.
+    Time: 1700ms
+    100% matching, 36346 words.
+    Time: 1100ms
+    100% matching, 50000 words.
+    Time: 1600ms
+    100% matching, 50000 words.
+    Time: 1700ms
+    100% matching, 50000 words.
+    Time: 1700ms
+    100% matching, 50000 words.
+    Time: 1600ms
+    100% matching, 50000 words.
+    Time: 1700ms
+    100% matching, 50000 words.
+    Time: 1700ms
+    100% matching, 50000 words.
+    Time: 1600ms
+    100% matching, 50000 words.
+    Time: 1700ms
+    100% matching, 50000 words.
     Time: 1500ms
     100% matching, 50000 words.
     Time: 1600ms
@@ -393,52 +437,6 @@ let%expect_test "In depth" =
     100% matching, 50000 words.
     Time: 1600ms
     100% matching, 50000 words.
-    Time: 1700ms
-    100% matching, 50000 words.
-    Time: 1700ms
-    100% matching, 50000 words.
-    Time: 1700ms
-    100% matching, 50000 words.
-    Time: 1700ms
-    100% matching, 50000 words.
-    Time: 1700ms
-    100% matching, 50000 words.
-    Time: 1700ms
-    100% matching, 50000 words.
-    Time: 1800ms
-    100% matching, 50000 words.
-    Time: 1700ms
-    100% matching, 50000 words.
-    Time: 1700ms
-    100% matching, 36346 words.
-    Time: 1100ms
-    100% matching, 50000 words.
-    Time: 1700ms
-    100% matching, 50000 words.
-    Time: 1600ms
-    100% matching, 50000 words.
-    Time: 1700ms
-    100% matching, 50000 words.
-    Time: 1700ms
-    100% matching, 50000 words.
-    Time: 1700ms
-    100% matching, 50000 words.
-    Time: 1600ms
-    100% matching, 50000 words.
-    Time: 1600ms
-    100% matching, 50000 words.
-    Time: 1700ms
-    100% matching, 50000 words.
-    Time: 1700ms
-    100% matching, 50000 words.
-    Time: 1700ms
-    100% matching, 50000 words.
-    Time: 1700ms
-    100% matching, 50000 words.
-    Time: 1700ms
-    100% matching, 50000 words.
-    Time: 1700ms
-    100% matching, 50000 words.
     Time: 1600ms
     100% matching, 50000 words.
     Time: 1600ms
@@ -447,8 +445,10 @@ let%expect_test "In depth" =
     100% matching, 50000 words.
     Time: 1600ms
     100% matching, 50000 words.
-    Time: 1600ms
+    Time: 1700ms
     100% matching, 50000 words.
-    Time: 1600ms
+    Time: 1700ms
+    100% matching, 50000 words.
+    Time: 1700ms
     100% matching, 10665 words.
     Time: 300ms |}] *)

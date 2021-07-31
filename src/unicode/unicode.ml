@@ -407,11 +407,26 @@ let split_into_glyphs box =
   Queue.to_array glyphs
 
 let dmetaphone ?max_length box =
-  let original, glyphs =
-    let base = box |> standardize ~preserve:Dmetaphone.preserve ~case:Char.uppercase in
-    cmp_bytes base, split_into_glyphs base
-  in
-  Dmetaphone.double_metaphone ?max_length ~standardized:original ~glyphs
+  let base = box |> standardize ~preserve:Dmetaphone.preserve ~case:Char.uppercase in
+  match cmp_bytes base with
+  | "" -> "", ""
+  | original ->
+    let queue = Queue.create ~capacity:30 () in
+    let glyphs =
+      (* This is a modified version of split_into_glyphs since standardize upholds certain invariants *)
+      Uuseg_string.fold_utf_8 `Grapheme_cluster
+        (fun () -> function
+          | "ç"
+           |"Ç" ->
+            Queue.enqueue queue '\x03'
+          | "ñ"
+           |"Ñ" ->
+            Queue.enqueue queue '\x09'
+          | m -> Queue.enqueue queue (Char.of_string m))
+        () original;
+      Queue.to_list queue
+    in
+    Dmetaphone.double_metaphone ?max_length ~glyphs ~num_glyphs:(Queue.length queue)
 
 let index box =
   let bytes = utf8_bytes box in
