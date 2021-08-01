@@ -328,127 +328,100 @@ let languages =
   ]
 
 let test_language dict =
-  let t0 = Time_now.nanoseconds_since_unix_epoch () in
-  (String.split_lines dict
-   |> List.fold ~init:(0, 0, "", []) ~f:(fun (good, bad, shortest, all) word ->
-        let unicode = Unicode.create word in
-        match cpp_dmetaphone unicode, Unicode.dmetaphone unicode with
-        | original, custom when [%equal: string * string] original custom -> good + 1, bad, shortest, all
-        | _ ->
-          let shortest =
-            if String.is_empty shortest || String.length word < String.length shortest
-            then word
-            else shortest
-          in
-          let all = if bad < 100 then word :: all else [] in
-          good, bad + 1, shortest, all
+  String.split_lines dict
+  |> List.fold ~init:(0, 0, "", []) ~f:(fun (good, bad, shortest, all) word ->
+       let unicode = Unicode.create word in
+       match cpp_dmetaphone unicode, Unicode.dmetaphone unicode with
+       | original, custom when [%equal: string * string] original custom -> good + 1, bad, shortest, all
+       | _ ->
+         let shortest =
+           if String.is_empty shortest || String.length word < String.length shortest
+           then word
+           else shortest
+         in
+         let all = if bad < 100 then word :: all else [] in
+         good, bad + 1, shortest, all
+     )
+  |> function
+  | good, 0, _, _ -> print_endline (sprintf "100%% matching, %d words." good)
+  | good, bad, shortest, [] ->
+    print_endline (sprintf "Matching: %d. Incorrect: %d. Shortest incorrect: '%s'" good bad shortest)
+  | good, bad, shortest, words ->
+    print_endline
+      (sprintf "Matching: %d. Incorrect: %d. Shortest incorrect: '%s'. All incorrect: %s" good bad
+         shortest (String.concat ~sep:", " words)
       )
-   |> function
-   | good, 0, _, _ -> print_endline (sprintf "100%% matching, %d words." good)
-   | good, bad, shortest, [] ->
-     print_endline (sprintf "Matching: %d. Incorrect: %d. Shortest incorrect: '%s'" good bad shortest)
-   | good, bad, shortest, words ->
-     print_endline
-       (sprintf "Matching: %d. Incorrect: %d. Shortest incorrect: '%s'. All incorrect: %s" good bad
-          shortest (String.concat ~sep:", " words)
-       )
-  );
-  let t1 = Time_now.nanoseconds_since_unix_epoch () in
-  print_endline
-    (sprintf !"Time: %dms"
-       (Int63.(t1 - t0 |> to_float)
-       |> Time.Span.of_ns
-       |> Time.Span.to_ms
-       |> Int.of_float
-       |> Int.round_nearest ~to_multiple_of:100
-       )
-    )
 
 let%expect_test "In depth" =
   test_language english;
   [%expect {|
-    100% matching, 58109 words.
-    Time: 1800ms |}];
+    100% matching, 58109 words. |}];
   test_language french;
   [%expect {|
-      100% matching, 22740 words.
-      Time: 600ms |}];
+      100% matching, 22740 words. |}];
   test_language pinyin;
   [%expect {|
-    100% matching, 8841 words.
-    Time: 200ms |}]
+    100% matching, 8841 words. |}]
+
+let%expect_test "Benchmark" =
+  let benchmark dict =
+    let t0 = Time_now.nanoseconds_since_unix_epoch () in
+    String.split_lines dict
+    |> List.iter ~f:(fun word ->
+         let unicode = Unicode.create word in
+         let _code = Unicode.dmetaphone unicode in
+         ()
+       );
+    let t1 = Time_now.nanoseconds_since_unix_epoch () in
+    print_endline
+      (sprintf !"Time: %dms"
+         (Int63.(t1 - t0 |> to_float)
+         |> Time.Span.of_ns
+         |> Time.Span.to_ms
+         |> Int.of_float
+         |> Int.round_nearest ~to_multiple_of:100
+         )
+      )
+  in
+  benchmark english;
+  [%expect {| Time: 1600ms |}]
 
 (* let%expect_test "Most common per language" =
   List.iter languages ~f:(fun lang -> test_language lang);
   [%expect
     {|
     100% matching, 7052 words.
-    Time: 200ms
     100% matching, 50000 words.
-    Time: 1700ms
     100% matching, 50000 words.
-    Time: 1600ms
     100% matching, 50000 words.
-    Time: 1700ms
     100% matching, 50000 words.
-    Time: 1700ms
     100% matching, 50000 words.
-    Time: 1700ms
     100% matching, 50000 words.
-    Time: 1600ms
     100% matching, 50000 words.
-    Time: 1600ms
     100% matching, 50000 words.
-    Time: 1600ms
     100% matching, 50000 words.
-    Time: 1600ms
     100% matching, 50000 words.
-    Time: 1600ms
     100% matching, 50000 words.
-    Time: 1600ms
     100% matching, 50000 words.
-    Time: 1600ms
     100% matching, 50000 words.
-    Time: 1700ms
     100% matching, 36346 words.
-    Time: 1100ms
     100% matching, 50000 words.
-    Time: 1600ms
     100% matching, 50000 words.
-    Time: 1700ms
     100% matching, 50000 words.
-    Time: 1700ms
     100% matching, 50000 words.
-    Time: 1600ms
     100% matching, 50000 words.
-    Time: 1700ms
     100% matching, 50000 words.
-    Time: 1700ms
     100% matching, 50000 words.
-    Time: 1600ms
     100% matching, 50000 words.
-    Time: 1700ms
     100% matching, 50000 words.
-    Time: 1500ms
     100% matching, 50000 words.
-    Time: 1600ms
     100% matching, 50000 words.
-    Time: 1600ms
     100% matching, 50000 words.
-    Time: 1600ms
     100% matching, 50000 words.
-    Time: 1600ms
     100% matching, 50000 words.
-    Time: 1600ms
     100% matching, 50000 words.
-    Time: 1600ms
     100% matching, 50000 words.
-    Time: 1600ms
     100% matching, 50000 words.
-    Time: 1700ms
     100% matching, 50000 words.
-    Time: 1700ms
     100% matching, 50000 words.
-    Time: 1700ms
-    100% matching, 10665 words.
-    Time: 300ms |}] *)
+    100% matching, 10665 words. |}] *)
