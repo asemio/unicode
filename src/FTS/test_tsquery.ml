@@ -29,19 +29,19 @@ let%expect_test "TSQuery" =
     {| ("('TTL':* | '_TTL':* | 'HL':* | '_HL':* | 'ARLT':* | '_FRLT':* | 'ALKM':* | '_FLKM':*)") |}];
   name ~accept_prefix:false ~across_words:AND test_string |> to_string |> test;
   [%expect {| ("('TTL' & '_TTL' & 'HL' & '_HL' & 'ARLT' & '_FRLT' & 'ALKM' & '_FLKM')") |}];
-  english_trigrams ~across_trigrams:NEIGHBOR ~across_words:AND test_string |> to_string |> test;
+  english_trigrams ~across_trigrams:(NEIGHBOR 1) ~across_words:AND test_string |> to_string |> test;
   [%expect
     {| ("(('tit' <-> 'itl' <-> 'tle') & ('hel' <-> 'ell' <-> 'llo') & ('wor' <-> 'orl' <-> 'rld') & ('wel' <-> 'elc' <-> 'lco' <-> 'com' <-> 'ome'))") |}];
-  english_trigrams ~across_trigrams:NEIGHBOR ~across_words:OR test_string |> to_string |> test;
+  english_trigrams ~across_trigrams:(NEIGHBOR 1) ~across_words:OR test_string |> to_string |> test;
   [%expect
     {| ("(('tit' <-> 'itl' <-> 'tle') | ('hel' <-> 'ell' <-> 'llo') | ('wor' <-> 'orl' <-> 'rld') | ('wel' <-> 'elc' <-> 'lco' <-> 'com' <-> 'ome'))") |}];
   english_trigrams ~across_trigrams:OR ~across_words:AND test_string |> to_string |> test;
   [%expect
     {| ("(('tit' | 'itl' | 'tle') & ('hel' | 'ell' | 'llo') & ('wor' | 'orl' | 'rld') & ('wel' | 'elc' | 'lco' | 'com' | 'ome'))") |}];
-  tag_trigrams ~across_trigrams:NEIGHBOR ~across_words:AND test_string |> to_string |> test;
+  tag_trigrams ~across_trigrams:(NEIGHBOR 1) ~across_words:AND test_string |> to_string |> test;
   [%expect
     {| ("(('tit' <-> 'itl' <-> 'tle') & ('hel' <-> 'ell' <-> 'llo') & ('wor' <-> 'orl' <-> 'rld') & ('wel' <-> 'elc' <-> 'lco' <-> 'com' <-> 'ome'))") |}];
-  tag_trigrams ~across_trigrams:NEIGHBOR ~across_words:OR test_string |> to_string |> test;
+  tag_trigrams ~across_trigrams:(NEIGHBOR 1) ~across_words:OR test_string |> to_string |> test;
   [%expect
     {| ("(('tit' <-> 'itl' <-> 'tle') | ('hel' <-> 'ell' <-> 'llo') | ('wor' <-> 'orl' <-> 'rld') | ('wel' <-> 'elc' <-> 'lco' <-> 'com' <-> 'ome'))") |}];
   tag_trigrams ~across_trigrams:OR ~across_words:AND test_string |> to_string |> test;

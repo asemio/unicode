@@ -1,16 +1,19 @@
 open! Core_kernel
 
-let rec fold_neighbor = function
-| None, [] -> Int.Map.empty
-| Some acc, [] -> acc
-| None, first :: rest -> if Int.Map.is_empty first then first else fold_neighbor (Some first, rest)
-| Some acc, first :: rest ->
-  let positions =
-    Int.Map.filter_mapi acc ~f:(fun ~key:position ~data:width ->
-      Int.Map.find first (position + width) |> Option.map ~f:(( + ) width)
-    )
+let fold_neighbor ~gap ll =
+  let rec loop = function
+    | None, [] -> Int.Map.empty
+    | Some acc, [] -> acc
+    | None, first :: rest -> if Int.Map.is_empty first then first else loop (Some first, rest)
+    | Some acc, first :: rest ->
+      let positions =
+        Int.Map.filter_mapi acc ~f:(fun ~key:position ~data:width ->
+          Int.Map.find first (position + width + gap - 1) |> Option.map ~f:(( + ) width)
+        )
+      in
+      if Int.Map.is_empty positions then positions else loop (Some positions, rest)
   in
-  if Int.Map.is_empty positions then positions else fold_neighbor (Some positions, rest)
+  loop (None, ll)
 
 let union a b =
   Int.Map.merge a b ~f:(fun ~key -> function
@@ -61,7 +64,7 @@ let rec get_positions (btree : Tsvector.btree) : Tsquery.t -> int Int.Map.t = fu
 | Clause (_, []) -> Int.Map.empty
 | Clause (OR, ll) -> List.map ll ~f:(get_positions btree) |> List.reduce_exn ~f:union
 | Clause (AND, ll) -> List.map ll ~f:(get_positions btree) |> List.reduce_exn ~f:intersect
-| Clause (NEIGHBOR, ll) -> fold_neighbor (None, List.map ll ~f:(get_positions btree))
+| Clause (NEIGHBOR gap, ll) -> fold_neighbor ~gap (List.map ll ~f:(get_positions btree))
 
 let get_btree (vector : Tsvector.t) : Tsvector.btree =
   match vector with
@@ -105,7 +108,7 @@ let matches vector root_query =
       |> Option.value_map ~default:false ~f:(fun (x, _) -> String.is_prefix ~prefix x)
     | Clause (AND, ll) -> List.for_all ll ~f:loop
     | Clause (OR, ll) -> List.exists ll ~f:loop
-    | Clause (NEIGHBOR, []) -> true
-    | Clause (NEIGHBOR, _) as query -> get_positions btree query |> Int.Map.is_empty |> not
+    | Clause (NEIGHBOR _, []) -> true
+    | Clause (NEIGHBOR _, _) as query -> get_positions btree query |> Int.Map.is_empty |> not
   in
   loop root_query

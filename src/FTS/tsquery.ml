@@ -3,7 +3,7 @@ open! Core_kernel
 type op =
   | AND
   | OR
-  | NEIGHBOR
+  | NEIGHBOR of int
 [@@deriving sexp]
 
 type t =
@@ -77,7 +77,8 @@ let to_string =
   let symbol_of_op = function
     | AND -> " & "
     | OR -> " | "
-    | NEIGHBOR -> " <-> "
+    | NEIGHBOR 1 -> " <-> "
+    | NEIGHBOR n -> sprintf " <%d> " n
   in
   function
   | Clause (_, []) -> None

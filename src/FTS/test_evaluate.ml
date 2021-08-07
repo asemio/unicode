@@ -39,37 +39,49 @@ let%expect_test "Get positions" =
   [%expect {|
     ('fox':* & 'fox')
     ((4 1) (9 1)) |}];
-  test btree Tsquery.(Clause (NEIGHBOR, [ Prefix "fox"; Token "brown" ]));
+  test btree Tsquery.(Clause (NEIGHBOR 1, [ Prefix "fox"; Token "brown" ]));
   [%expect {|
     ('fox':* <-> 'brown')
     ((2 2)) |}];
-  test btree Tsquery.(Clause (NEIGHBOR, [ Token "quick"; Prefix "fox"; Token "brown" ]));
+  test btree Tsquery.(Clause (NEIGHBOR 1, [ Token "quick"; Prefix "fox"; Token "brown" ]));
   [%expect {|
     ('quick' <-> 'fox':* <-> 'brown')
     ((1 3)) |}];
   test btree
-    Tsquery.(Clause (NEIGHBOR, [ Clause (NEIGHBOR, [ Prefix "fox"; Token "brown" ]); Token "fox" ]));
+    Tsquery.(Clause (NEIGHBOR 1, [ Clause (NEIGHBOR 1, [ Prefix "fox"; Token "brown" ]); Token "fox" ]));
   [%expect {|
     (('fox':* <-> 'brown') <-> 'fox')
     ((2 3)) |}];
   test btree
-    Tsquery.(Clause (NEIGHBOR, [ Clause (NEIGHBOR, [ Prefix "fox"; Token "brown" ]); Token "jumps" ]));
+    Tsquery.(Clause (NEIGHBOR 1, [ Clause (NEIGHBOR 1, [ Prefix "fox"; Token "brown" ]); Token "jumps" ]));
   [%expect {|
       (('fox':* <-> 'brown') <-> 'jumps')
       () |}];
   test btree
     Tsquery.(
       Clause
-        ( NEIGHBOR,
+        ( NEIGHBOR 1,
           [
-            Clause (NEIGHBOR, [ Prefix "fox"; Token "brown" ]);
-            Clause (OR, [ Token "jumps"; Clause (NEIGHBOR, [ Prefix "f"; Token "jumps" ]) ]);
+            Clause (NEIGHBOR 1, [ Prefix "fox"; Token "brown" ]);
+            Clause (OR, [ Token "jumps"; Clause (NEIGHBOR 1, [ Prefix "f"; Token "jumps" ]) ]);
           ]
         )
     );
   [%expect {|
     (('fox':* <-> 'brown') <-> ('jumps' | ('f':* <-> 'jumps')))
-    ((2 4)) |}]
+    ((2 4)) |}];
+  test btree Tsquery.(Clause (NEIGHBOR 2, [ Prefix "fox"; Prefix "fox" ]));
+  [%expect {|
+    ('fox':* <2> 'fox':*)
+    ((2 2)) |}];
+  test btree Tsquery.(Clause (NEIGHBOR 3, [ Prefix "fox"; Prefix "fox" ]));
+  [%expect {|
+    ('fox':* <3> 'fox':*)
+    () |}];
+  test btree Tsquery.(Clause (NEIGHBOR 2, [ Prefix "fox"; Clause (OR, [ Prefix "fox"; Prefix "jump" ]) ]));
+  [%expect {|
+    ('fox':* <2> ('fox':* | 'jump':*))
+    ((2 2)) |}]
 
 let%expect_test "Matching" =
   let test vector query = Evaluate.matches vector query |> Bool.to_string |> print_endline in
@@ -87,12 +99,12 @@ let%expect_test "Matching" =
   [%expect {| true |}];
   test (Tsvector.tag "Hello world") Tsquery.(Clause (AND, [ Prefix "wo"; Prefix "h" ]));
   [%expect {| true |}];
-  test (Tsvector.tag "Hello world") Tsquery.(Clause (NEIGHBOR, [ Prefix "wo"; Prefix "h" ]));
+  test (Tsvector.tag "Hello world") Tsquery.(Clause (NEIGHBOR 1, [ Prefix "wo"; Prefix "h" ]));
   [%expect {| false |}];
-  test (Tsvector.tag "Hello world") Tsquery.(Clause (NEIGHBOR, [ Prefix "h"; Prefix "wo" ]));
+  test (Tsvector.tag "Hello world") Tsquery.(Clause (NEIGHBOR 1, [ Prefix "h"; Prefix "wo" ]));
   [%expect {| true |}];
   let vector = Tsvector.tag "the quick foxy brown fox jumps over the lazy fox" in
-  test vector Tsquery.(Clause (NEIGHBOR, [ Prefix "fox"; Prefix "br" ]));
+  test vector Tsquery.(Clause (NEIGHBOR 1, [ Prefix "fox"; Prefix "br" ]));
   [%expect {| true |}];
-  test vector Tsquery.(Clause (AND, [ Clause (NEIGHBOR, [ Prefix "fox"; Prefix "br" ]); Token "jump" ]));
+  test vector Tsquery.(Clause (AND, [ Clause (NEIGHBOR 1, [ Prefix "fox"; Prefix "br" ]); Token "jump" ]));
   [%expect {| false |}]
