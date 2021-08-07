@@ -12,6 +12,16 @@ type t =
   | Clause of op * t list
 [@@deriving sexp, variants]
 
+let quote s =
+  let buf = Buffer.create (String.length s + 5) in
+  Buffer.add_char buf '\'';
+  String.iter s ~f:(function
+    | '\'' -> Buffer.add_string buf "''"
+    | c -> Buffer.add_char buf c
+    );
+  Buffer.add_char buf '\'';
+  Buffer.contents buf
+
 let group op ~f seq = Sequence.map seq ~f |> Sequence.to_list |> clause op
 
 module Record = struct
@@ -73,7 +83,7 @@ let to_string =
   | Clause (_, []) -> None
   | x ->
     let rec loop = function
-      | Token s -> Tsvector.quote s
+      | Token s -> quote s
       | Prefix s -> sprintf "%s:*" (loop (Token s))
       | Clause (_, [ x ]) -> loop x
       | Clause (op, ll) -> List.map ~f:loop ll |> String.concat ~sep:(symbol_of_op op) |> sprintf "(%s)"

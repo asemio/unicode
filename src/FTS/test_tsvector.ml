@@ -31,6 +31,9 @@ let%expect_test "TSVector" =
   tag_trigrams test_string |> to_string |> test;
   [%expect
     {| '123':1 '23.':2 '3.a':3 '.ab':4 'abc':5 'hel':6 'ell':7 'llo':8 'wor':9 'orl':10 'rld':11 |}];
+  concat (tag test_string) (english_trigrams test_string) |> to_string |> test;
+  [%expect
+    {| '123.abc':1 'hello':2 'world':3 '012':4 '123':5 '23a':6 '3ab':7 'abc':8 'hel':9 'ell':10 'llo':11 'wor':12 'orl':13 'rld':14 |}];
   let open Record in
   { aa = "hello"; bb = 123; cc = true; dd = C "world"; ee = [ B; C "foo" ]; ff = [ 1; 2; 3 ] }
   |> Fields_of_test.Direct.fold ~aa:(use tag_trigrams) ~bb:skip ~cc:(bool "cc")

@@ -1,19 +1,24 @@
 open! Core_kernel
 
-type t =
+type lexeme =
   | Token   of string
   | Indexed of string
 [@@deriving sexp, variants]
 
-let quote s =
-  String.concat_map s ~f:(function
-    | '\'' -> "''"
-    | c -> Char.to_string c
-    )
-  |> sprintf "'%s'"
+type entry =
+  [ `Indexed   of int Int.Map.t
+  | `Unindexed
+  ]
+
+type btree = entry String.Map.t
+
+type t = {
+  seq: lexeme Sequence.t;
+  mutable btree: btree option;
+}
 
 module Record = struct
-  type ('r, 'a) combinator = t list -> ('r, 'a) Field.t -> 'r -> 'a -> t list
+  type ('r, 'a) combinator = lexeme list -> ('r, 'a) Field.t -> 'r -> 'a -> lexeme list
 
   let symbol sexp_of x = sexp_of x |> Sexp.to_string
 
@@ -34,7 +39,7 @@ module Record = struct
   let string : ('r, 'a) combinator = (fun acc f r x -> single Fn.id acc f r x)
 
   let use parser : ('r, 'a) combinator =
-   (fun acc _f _r x -> Sequence.fold (parser x) ~init:acc ~f:(fun acc x -> x :: acc))
+   (fun acc _f _r x -> Sequence.fold (parser x).seq ~init:acc ~f:(fun acc x -> x :: acc))
 
   let bool v : ('r, 'a) combinator = (fun acc _f _r x -> if x then Token v :: acc else acc)
 
@@ -44,12 +49,16 @@ module Record = struct
       Token (sprintf "%s=%s" (Field.name f) (to_string v)) :: acc
     )
 
-  let create fold = fold ~init:[] |> Sequence.of_list
+  let create fold = { seq = fold ~init:[] |> Sequence.of_list; btree = None }
 end
 
-let create seq = Sequence.map seq ~f:indexed
+let make seq = Sequence.map seq ~f:indexed
 
-let create_trigrams seq = Sequence.bind seq ~f:Tokenizers.trigram |> create
+let create seq = { seq = make seq; btree = None }
+
+let create_trigrams seq = { seq = Sequence.bind seq ~f:Tokenizers.trigram |> make; btree = None }
+
+let concat { seq = x; _ } { seq = y; _ } = { seq = Sequence.append x y; btree = None }
 
 let name raw = Parsers.name raw |> create
 
@@ -59,10 +68,10 @@ let english_trigrams raw = Parsers.english raw |> create_trigrams
 
 let tag_trigrams raw = Parsers.tag raw |> create_trigrams
 
-let to_string seq =
+let to_string { seq; _ } =
   Sequence.folding_map seq ~init:1 ~f:(fun i -> function
-    | Token s -> i, quote s
-    | Indexed s -> i + 1, sprintf !"%{quote}:%d" s i
+    | Token s -> i, Tsquery.quote s
+    | Indexed s -> i + 1, sprintf !"%{Tsquery.quote}:%d" s i
   )
   |> Sequence.to_array
   |> String.concat_array ~sep:" "
