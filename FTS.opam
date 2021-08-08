@@ -20,6 +20,8 @@ depends: [
 
   "core_kernel" { >= "v0.14.0" }
 
+  "angstrom" { >= "0.15.0" }
+
   "ppx_deriving" { >= "4.4.1" }
 ]
 build: ["dune" "build" "-p" name "-j" jobs]

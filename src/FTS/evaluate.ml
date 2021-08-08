@@ -69,7 +69,7 @@ let rec get_positions (btree : Tsvector.btree) : Tsquery.t -> int Int.Map.t = fu
 let get_btree (vector : Tsvector.t) : Tsvector.btree =
   match vector with
   | { btree = Some x; _ } -> x
-  | { btree = None; seq } ->
+  | { btree = None; seq; _ } ->
     let _, map =
       Sequence.fold seq ~init:(0, String.Map.empty) ~f:(fun (i, map) -> function
         | Token key ->
@@ -82,7 +82,7 @@ let get_btree (vector : Tsvector.t) : Tsvector.btree =
               )
           in
           i, acc
-        | Indexed key ->
+        | Indexed (key, _) ->
           let acc =
             String.Map.update map key ~f:(function
               | None

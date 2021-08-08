@@ -43,4 +43,4 @@ let%expect_test "TSVector" =
   |> create
   |> to_string
   |> test;
-  [%expect {| 'ff=3' 'ff=2' 'ff=1' 'ee=(C foo)' 'ee=B' '(C world)' 'cc' 'llo':1 'ell':2 'hel':3 |}]
+  [%expect {| 'ff=3' 'ff=2' 'ff=1' 'ee=(C foo)' 'ee=B' '(C world)' 'cc' 'llo':3 'ell':2 'hel':1 |}]

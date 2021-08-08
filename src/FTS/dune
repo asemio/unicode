@@ -7,6 +7,7 @@
 
     core_kernel
     re
+    angstrom
   )
   (preprocess (pps
     ppx_jane

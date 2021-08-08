@@ -2,20 +2,23 @@ open! Core_kernel
 
 type lexeme =
   | Token   of string
-  | Indexed of string
+  | Indexed of (string * int list)
 [@@deriving sexp, variants]
 
 type entry =
   [ `Indexed   of int Int.Map.t
   | `Unindexed
   ]
+[@@deriving sexp_of]
 
-type btree = entry String.Map.t
+type btree = entry String.Map.t [@@deriving sexp_of]
 
 type t = {
   seq: lexeme Sequence.t;
+  mutable last: int option;
   mutable btree: btree option;
 }
+[@@deriving sexp_of]
 
 module Record = struct
   type ('r, 'a) combinator = lexeme list -> ('r, 'a) Field.t -> 'r -> 'a -> lexeme list
@@ -49,16 +52,43 @@ module Record = struct
       Token (sprintf "%s=%s" (Field.name f) (to_string v)) :: acc
     )
 
-  let create fold = { seq = fold ~init:[] |> Sequence.of_list; btree = None }
+  let create fold = { seq = fold ~init:[] |> Sequence.of_list; last = None; btree = None }
 end
 
-let make seq = Sequence.map seq ~f:indexed
+let make seq = Sequence.folding_map seq ~init:1 ~f:(fun acc s -> acc + 1, Indexed (s, [ acc ]))
 
-let create seq = { seq = make seq; btree = None }
+let create seq = { seq = make seq; last = None; btree = None }
 
-let create_trigrams seq = { seq = Sequence.bind seq ~f:Tokenizers.trigram |> make; btree = None }
+let create_trigrams seq =
+  { seq = Sequence.bind seq ~f:Tokenizers.trigram |> make; last = None; btree = None }
 
-let concat { seq = x; _ } { seq = y; _ } = { seq = Sequence.append x y; btree = None }
+let concat left right =
+  let last_left =
+    match left.last with
+    | None ->
+      let last =
+        Sequence.fold left.seq ~init:None ~f:(fun acc x ->
+          match x, acc with
+          | Token _, x -> x
+          | Indexed (_, ll), None -> List.reduce ll ~f:max
+          | Indexed (_, ll), Some y -> List.reduce (y :: ll) ~f:max
+        )
+      in
+      left.last <- last;
+      last
+    | Some _ as x -> x
+  in
+  let seq =
+    (match last_left with
+    | Some last ->
+      Sequence.map right.seq ~f:(function
+        | Token _ as x -> x
+        | Indexed (x, ll) -> Indexed (x, List.map ll ~f:(( + ) last))
+        )
+    | None -> right.seq)
+    |> Sequence.append left.seq
+  in
+  { seq; last = None; btree = None }
 
 let name raw = Parsers.name raw |> create
 
@@ -69,9 +99,10 @@ let english_trigrams raw = Parsers.english raw |> create_trigrams
 let tag_trigrams raw = Parsers.tag raw |> create_trigrams
 
 let to_string { seq; _ } =
-  Sequence.folding_map seq ~init:1 ~f:(fun i -> function
-    | Token s -> i, Tsquery.quote s
-    | Indexed s -> i + 1, sprintf !"%{Tsquery.quote}:%d" s i
-  )
+  Sequence.map seq ~f:(function
+    | Token s -> Tsquery.quote s
+    | Indexed (s, ll) ->
+      sprintf !"%{Tsquery.quote}:%s" s (List.map ll ~f:Int.to_string |> String.concat ~sep:",")
+    )
   |> Sequence.to_array
   |> String.concat_array ~sep:" "
