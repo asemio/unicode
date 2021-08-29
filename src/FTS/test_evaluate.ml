@@ -33,29 +33,29 @@ let%expect_test "Get positions" =
     ((2 1) (4 1) (9 1)) |}];
   test btree Tsquery.(Clause (OR, [ Prefix "fox"; Token "the" ]));
   [%expect {|
-    ('fox':* | 'the')
+    'fox':* | 'the'
     ((0 1) (2 1) (4 1) (7 1) (9 1)) |}];
   test btree Tsquery.(Clause (AND, [ Prefix "fox"; Token "fox" ]));
   [%expect {|
-    ('fox':* & 'fox')
+    'fox':* & 'fox'
     ((4 1) (9 1)) |}];
   test btree Tsquery.(Clause (NEIGHBOR 1, [ Prefix "fox"; Token "brown" ]));
   [%expect {|
-    ('fox':* <-> 'brown')
+    'fox':* <-> 'brown'
     ((2 2)) |}];
   test btree Tsquery.(Clause (NEIGHBOR 1, [ Token "quick"; Prefix "fox"; Token "brown" ]));
   [%expect {|
-    ('quick' <-> 'fox':* <-> 'brown')
+    'quick' <-> 'fox':* <-> 'brown'
     ((1 3)) |}];
   test btree
     Tsquery.(Clause (NEIGHBOR 1, [ Clause (NEIGHBOR 1, [ Prefix "fox"; Token "brown" ]); Token "fox" ]));
   [%expect {|
-    (('fox':* <-> 'brown') <-> 'fox')
+    ('fox':* <-> 'brown') <-> 'fox'
     ((2 3)) |}];
   test btree
     Tsquery.(Clause (NEIGHBOR 1, [ Clause (NEIGHBOR 1, [ Prefix "fox"; Token "brown" ]); Token "jumps" ]));
   [%expect {|
-      (('fox':* <-> 'brown') <-> 'jumps')
+      ('fox':* <-> 'brown') <-> 'jumps'
       () |}];
   test btree
     Tsquery.(
@@ -68,19 +68,19 @@ let%expect_test "Get positions" =
         )
     );
   [%expect {|
-    (('fox':* <-> 'brown') <-> ('jumps' | ('f':* <-> 'jumps')))
+    ('fox':* <-> 'brown') <-> ('jumps' | ('f':* <-> 'jumps'))
     ((2 4)) |}];
   test btree Tsquery.(Clause (NEIGHBOR 2, [ Prefix "fox"; Prefix "fox" ]));
   [%expect {|
-    ('fox':* <2> 'fox':*)
+    'fox':* <2> 'fox':*
     ((2 2)) |}];
   test btree Tsquery.(Clause (NEIGHBOR 3, [ Prefix "fox"; Prefix "fox" ]));
   [%expect {|
-    ('fox':* <3> 'fox':*)
+    'fox':* <3> 'fox':*
     () |}];
   test btree Tsquery.(Clause (NEIGHBOR 2, [ Prefix "fox"; Clause (OR, [ Prefix "fox"; Prefix "jump" ]) ]));
   [%expect {|
-    ('fox':* <2> ('fox':* | 'jump':*))
+    'fox':* <2> ('fox':* | 'jump':*)
     ((2 2)) |}]
 
 let%expect_test "Matching" =

@@ -49,3 +49,97 @@ let%expect_test "Tsvector" =
   [%expect {| (Ok ((seq ((Token a') (Token b))) (last ()) (btree ()))) |}];
   test "' a' '";
   [%expect {| (Ok ((seq ((Token " a") (Token '))) (last ()) (btree ()))) |}]
+
+let%expect_test "Tsquery" =
+  let test raw =
+    let result = Parsing.tsquery raw in
+    sprintf
+      !"%s\n%{sexp: (Tsquery.t, string) Result.t}"
+      (Result.ok result |> Option.bind ~f:Tsquery.to_string |> Option.value ~default:"---")
+      result
+    |> print_endline
+  in
+  test "abc";
+  [%expect {|
+    'abc'
+    (Ok (Token abc)) |}];
+  test "abc|def";
+  [%expect {|
+    'abc' | 'def'
+    (Ok (Clause OR ((Token abc) (Token def)))) |}];
+  test "'abc'|def";
+  [%expect {|
+    'abc' | 'def'
+    (Ok (Clause OR ((Token abc) (Token def)))) |}];
+  test "abc|'def'";
+  [%expect {|
+    'abc' | 'def'
+    (Ok (Clause OR ((Token abc) (Token def)))) |}];
+  test "'abc'|'def'";
+  [%expect {|
+    'abc' | 'def'
+    (Ok (Clause OR ((Token abc) (Token def)))) |}];
+  test " 'abc'|'def'";
+  [%expect {|
+    'abc' | 'def'
+    (Ok (Clause OR ((Token abc) (Token def)))) |}];
+  test "  'abc'|'def'";
+  [%expect {|
+    'abc' | 'def'
+    (Ok (Clause OR ((Token abc) (Token def)))) |}];
+  test "  abc | 'def'";
+  [%expect {|
+    'abc' | 'def'
+    (Ok (Clause OR ((Token abc) (Token def)))) |}];
+  test "  abc | 'def'  ";
+  [%expect {|
+    'abc' | 'def'
+    (Ok (Clause OR ((Token abc) (Token def)))) |}];
+  test "abc | 'def ' | ghi";
+  [%expect
+    {|
+    'abc' | 'def ' | 'ghi'
+    (Ok (Clause OR ((Token abc) (Token "def ") (Token ghi)))) |}];
+  test "abc & def & ghi";
+  [%expect {|
+    'abc' & 'def' & 'ghi'
+    (Ok (Clause AND ((Token abc) (Token def) (Token ghi)))) |}];
+  test " abc | def & ghi ";
+  [%expect
+    {|
+    ('abc' | 'def') & 'ghi'
+    (Ok (Clause AND ((Clause OR ((Token abc) (Token def))) (Token ghi)))) |}];
+  test " abc | def & ghi | jkl ";
+  [%expect
+    {|
+    ('abc' | 'def') & ('ghi' | 'jkl')
+    (Ok
+     (Clause AND
+      ((Clause OR ((Token abc) (Token def)))
+       (Clause OR ((Token ghi) (Token jkl)))))) |}];
+  test " abc & def | ghi & jkl ";
+  [%expect
+    {|
+    'abc' & ('def' | 'ghi') & 'jkl'
+    (Ok
+     (Clause AND ((Token abc) (Clause OR ((Token def) (Token ghi))) (Token jkl)))) |}];
+  test "abc <-> def <-> ghi <-> jkl | mno";
+  [%expect
+    {|
+    'abc' <-> 'def' <-> 'ghi' <-> ('jkl' | 'mno')
+    (Ok
+     (Clause (NEIGHBOR 1)
+      ((Token abc) (Token def) (Token ghi) (Clause OR ((Token jkl) (Token mno)))))) |}];
+  test "abc <3> def <-> ghi <0> jkl";
+  [%expect
+    {|
+    ---
+    (Error
+     ": Invalid distance in 'followed by' operator: expected '-' or an integer. Ex.: <->, <2>, <3>, etc.") |}];
+  test "abc | (def <2> 'ghi') & xyz";
+  [%expect {|
+    ('abc' | ('def' <2> 'ghi')) & 'xyz'
+    (Ok
+     (Clause AND
+      ((Clause OR ((Token abc) (Clause (NEIGHBOR 2) ((Token def) (Token ghi)))))
+       (Token xyz)))) |}]

@@ -1,10 +1,23 @@
 open! Core_kernel
 
 type op =
-  | AND
   | OR
+  | AND
   | NEIGHBOR of int
-[@@deriving sexp]
+[@@deriving sexp, equal]
+
+let ( << ) a b =
+  match a, b with
+  | OR, OR -> false
+  | OR, AND
+   |OR, NEIGHBOR _ ->
+    true
+  | AND, OR
+   |AND, AND ->
+    false
+  | AND, NEIGHBOR _ -> true
+  | NEIGHBOR _, NEIGHBOR 0 -> true
+  | NEIGHBOR _, _ -> false
 
 type t =
   | Token  of string
@@ -83,10 +96,13 @@ let to_string =
   function
   | Clause (_, []) -> None
   | x ->
-    let rec loop = function
+    let rec loop depth = function
       | Token s -> quote s
-      | Prefix s -> sprintf "%s:*" (loop (Token s))
-      | Clause (_, [ x ]) -> loop x
-      | Clause (op, ll) -> List.map ~f:loop ll |> String.concat ~sep:(symbol_of_op op) |> sprintf "(%s)"
+      | Prefix s -> sprintf "%s:*" (loop depth (Token s))
+      | Clause (_, [ x ]) -> loop depth x
+      | Clause (op, ll) ->
+        List.map ~f:(loop (depth + 1)) ll
+        |> String.concat ~sep:(symbol_of_op op)
+        |> if depth = 0 then Fn.id else sprintf "(%s)"
     in
-    Some (loop x)
+    Some (loop 0 x)

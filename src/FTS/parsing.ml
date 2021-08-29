@@ -1,13 +1,7 @@
 open! Core_kernel
 open Angstrom
 
-let unquoted_string_parser =
-  let stop_at = function
-    | ' '
-     |':' ->
-      true
-    | _ -> false
-  in
+let unquoted_string_parser ~stop_at =
   let buf = Buffer.create 16 in
   Angstrom.scan_state true (fun escaping -> function
     | '\'' when escaping -> Some false
@@ -50,26 +44,24 @@ let number_parser =
     | '0' .. '9' -> true
     | _ -> false
     )
-  >>| Int.of_string
+  >>= fun s ->
+  let i = Int.of_string s in
+  if Int.is_positive i then return i else fail (sprintf "Invalid position or distance: %d" i)
+
+let distance_parser ~message:failure_msg = choice ~failure_msg [ number_parser; char '-' >>| const 1 ]
 
 let maybe p = option None (p >>| Option.return)
 
 let tsvector raw =
-  let quoted_entry =
-    choice
-      [
-        ( char '\'' *> quoted_string_parser >>| fun x ->
-          (* print_endline "AAA"; *)
-          x
-        );
-        ( unquoted_string_parser >>| fun x ->
-          (* print_endline "BBB"; *)
-          x
-        );
-      ]
+  let stop_at = function
+    | ' '
+     |':' ->
+      true
+    | _ -> false
   in
+  let string_parser = char '\'' *> quoted_string_parser <|> unquoted_string_parser ~stop_at in
   let lexeme =
-    let+ token = quoted_entry
+    let+ token = string_parser
     and+ positions = maybe (char ':' *> sep_by1 (char ',') number_parser) in
     match positions with
     | None -> Tsvector.Token token
@@ -84,4 +76,75 @@ let tsvector raw =
   in
   parse_string ~consume:Consume.All parser raw
 
-(* let tsquery raw = *)
+type folder = {
+  andl: Tsquery.t list;
+  orl: Tsquery.t list;
+}
+[@@deriving sexp]
+
+let tsquery raw =
+  let open Tsquery in
+  let stop_at = function
+    | ' '
+     |':'
+     |'|'
+     |'&' ->
+      true
+    | _ -> false
+  in
+  let string_parser = char '\'' *> quoted_string_parser <|> unquoted_string_parser ~stop_at in
+  let spaces = skip_many (char ' ') in
+  let token_parser = string_parser >>| token in
+  (* let sequence ~sep nested = spaces *> sep_by1 (spaces *> char sep <* spaces) nested <* spaces in *)
+  let expr =
+    fix (fun expr ->
+      let parens = char '(' *> commit *> expr <* char ')' in
+      let sequence ~sep nested =
+        let+ ll =
+          many1
+            (let+ one = spaces *> nested
+             and+ () = spaces
+             and+ sep = sep
+             and+ () = spaces in
+             one, sep)
+        and+ last = nested <* spaces in
+        List.append ll [ last, NEIGHBOR 0 ]
+      in
+      let op_list =
+        let sep =
+          let message =
+            "Invalid distance in 'followed by' operator: expected '-' or an integer. Ex.: <->, <2>, <3>, \
+             etc."
+          in
+          choice
+            [
+              (char '<' *> commit *> distance_parser ~message <* char '>' >>| fun x -> NEIGHBOR x);
+              char '&' *> commit >>| const AND;
+              char '|' *> commit >>| const OR;
+            ]
+        in
+        sequence ~sep (choice [ parens; token_parser ]) >>| fun ll ->
+        let rec loop level acc : (t * op) list -> t * op * (t * op) list = function
+          | (x, op) :: rest when [%equal: op] level op -> loop level (x :: acc) rest
+          | (_, op) :: _ as ll when op << level ->
+            let clause, op, rest = loop op [] ll in
+            loop level acc ((clause, op) :: rest)
+          | (x, op) :: rest -> Clause (level, List.rev (x :: acc)), op, rest
+          | rest -> (
+            match acc with
+            | [ x ] -> x, level, rest
+            | _ -> Clause (level, List.rev acc), level, rest
+          )
+        in
+        let result =
+          match loop (NEIGHBOR 0) [] ll with
+          | x, NEIGHBOR 0, [] -> x
+          | x -> failwithf !"Impossible case: %{sexp: t * op * (t * op) list}" x ()
+        in
+        result
+      in
+      choice [ parens; op_list; token_parser ] <* spaces
+    )
+  in
+  let parser = expr in
+  parse_string ~consume:Consume.All parser raw
