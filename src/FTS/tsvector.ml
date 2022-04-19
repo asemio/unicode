@@ -1,24 +1,20 @@
 open! Core_kernel
-
-type lexeme =
-  | Token   of string
-  | Indexed of (string * int list)
-[@@deriving sexp, variants]
-
-type entry =
-  [ `Indexed   of int Int.Map.t
-  | `Unindexed
-  ]
-[@@deriving sexp_of]
-
-type btree = entry String.Map.t [@@deriving sexp_of]
+open Basic
 
 type t = {
   seq: lexeme Sequence.t;
-  mutable last: int option;
-  mutable btree: btree option;
+  last: int option Lazy.t;
+  btree: (Btree.t Lazy.t[@sexp.opaque]);
 }
 [@@deriving sexp_of]
+
+let get_last seq =
+  Sequence.fold seq ~init:None ~f:(fun acc x ->
+    match x, acc with
+    | Token _, x -> x
+    | Indexed (_, ll), None -> List.reduce ll ~f:max
+    | Indexed (_, ll), Some y -> List.reduce (y :: ll) ~f:max
+  )
 
 module Record = struct
   type ('r, 'a) combinator = lexeme list -> ('r, 'a) Field.t -> 'r -> 'a -> lexeme list
@@ -52,34 +48,24 @@ module Record = struct
       Token (sprintf "%s=%s" (Field.name f) (to_string v)) :: acc
     )
 
-  let create fold = { seq = fold ~init:[] |> Sequence.of_list; last = None; btree = None }
+  let create fold =
+    let seq = fold ~init:[] |> Sequence.of_list in
+    { seq; last = lazy (get_last seq); btree = lazy (Btree.of_seq seq) }
 end
 
 let make seq = Sequence.folding_map seq ~init:1 ~f:(fun acc s -> acc + 1, Indexed (s, [ acc ]))
 
-let create seq = { seq = make seq; last = None; btree = None }
+let create seq =
+  let seq = make seq in
+  { seq; last = lazy (get_last seq); btree = lazy (Btree.of_seq seq) }
 
 let create_trigrams seq =
-  { seq = Sequence.bind seq ~f:Tokenizers.trigram |> make; last = None; btree = None }
+  let seq = Sequence.bind seq ~f:Tokenizers.trigram |> make in
+  { seq; last = lazy (get_last seq); btree = lazy (Btree.of_seq seq) }
 
 let concat left right =
-  let last_left =
-    match left.last with
-    | None ->
-      let last =
-        Sequence.fold left.seq ~init:None ~f:(fun acc x ->
-          match x, acc with
-          | Token _, x -> x
-          | Indexed (_, ll), None -> List.reduce ll ~f:max
-          | Indexed (_, ll), Some y -> List.reduce (y :: ll) ~f:max
-        )
-      in
-      left.last <- last;
-      last
-    | Some _ as x -> x
-  in
   let seq =
-    (match last_left with
+    (match force left.last with
     | Some last ->
       Sequence.map right.seq ~f:(function
         | Token _ as x -> x
@@ -88,7 +74,7 @@ let concat left right =
     | None -> right.seq)
     |> Sequence.append left.seq
   in
-  { seq; last = None; btree = None }
+  { seq; last = lazy (get_last seq); btree = lazy (Btree.of_seq seq) }
 
 let name raw = Parsers.name raw |> create
 

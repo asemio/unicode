@@ -23,6 +23,7 @@ type t =
   | Token  of string
   | Prefix of string
   | Clause of op * t list
+  | NOT    of t
 [@@deriving sexp, variants]
 
 let quote s =
@@ -94,15 +95,16 @@ let to_string =
     | NEIGHBOR n -> sprintf " <%d> " n
   in
   function
-  | Clause (_, []) -> None
+  | Clause (_, []) -> ""
   | x ->
     let rec loop depth = function
       | Token s -> quote s
       | Prefix s -> sprintf "%s:*" (loop depth (Token s))
+      | NOT x -> sprintf "!%s" (loop (depth + 1) x)
       | Clause (_, [ x ]) -> loop depth x
       | Clause (op, ll) ->
         List.map ~f:(loop (depth + 1)) ll
         |> String.concat ~sep:(symbol_of_op op)
         |> if depth = 0 then Fn.id else sprintf "(%s)"
     in
-    Some (loop 0 x)
+    loop 0 x

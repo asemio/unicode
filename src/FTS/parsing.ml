@@ -1,5 +1,6 @@
 open! Core_kernel
 open Angstrom
+open Basic
 
 let unquoted_string_parser ~stop_at =
   let buf = Buffer.create 16 in
@@ -64,15 +65,19 @@ let tsvector raw =
     let+ token = string_parser
     and+ positions = maybe (char ':' *> sep_by1 (char ',') number_parser) in
     match positions with
-    | None -> Tsvector.Token token
-    | Some pos -> Tsvector.Indexed (token, pos)
+    | None -> Token token
+    | Some pos -> Indexed (token, pos)
   in
   let spaces = skip_many (char ' ') in
   let spaces1 = skip_many1 (char ' ') in
   let parser =
     spaces *> sep_by spaces1 lexeme
     <* spaces
-    >>| Tsvector.((fun lexemes -> { seq = Sequence.of_list lexemes; last = None; btree = None }))
+    >>| Tsvector.(
+          fun lexemes ->
+            let seq = Sequence.of_list lexemes in
+            { seq; last = lazy (get_last seq); btree = lazy (Btree.of_seq seq) }
+        )
   in
   parse_string ~consume:Consume.All parser raw
 
@@ -88,7 +93,10 @@ let tsquery raw =
     | ' '
      |':'
      |'|'
-     |'&' ->
+     |'&'
+     |'('
+     |')'
+     |'<' ->
       true
     | _ -> false
   in
@@ -98,7 +106,8 @@ let tsquery raw =
   (* let sequence ~sep nested = spaces *> sep_by1 (spaces *> char sep <* spaces) nested <* spaces in *)
   let expr =
     fix (fun expr ->
-      let parens = char '(' *> commit *> expr <* char ')' in
+      let parens = char '(' *> expr <* char ')' in
+      let negation = char '!' *> spaces *> choice [ parens; token_parser ] >>| fun x -> NOT x in
       let sequence ~sep nested =
         let+ ll =
           many1
@@ -118,12 +127,12 @@ let tsquery raw =
           in
           choice
             [
-              (char '<' *> commit *> distance_parser ~message <* char '>' >>| fun x -> NEIGHBOR x);
-              char '&' *> commit >>| const AND;
-              char '|' *> commit >>| const OR;
+              (char '<' *> distance_parser ~message <* char '>' >>| fun x -> NEIGHBOR x);
+              char '&' >>| const AND;
+              char '|' >>| const OR;
             ]
         in
-        sequence ~sep (choice [ parens; token_parser ]) >>| fun ll ->
+        sequence ~sep (choice [ negation; parens; token_parser ]) >>| fun ll ->
         let rec loop level acc : (t * op) list -> t * op * (t * op) list = function
           | (x, op) :: rest when [%equal: op] level op -> loop level (x :: acc) rest
           | (_, op) :: _ as ll when op << level ->
@@ -143,7 +152,7 @@ let tsquery raw =
         in
         result
       in
-      choice [ parens; op_list; token_parser ] <* spaces
+      choice [ op_list; negation; parens; token_parser ] <* spaces
     )
   in
   let parser = expr in
