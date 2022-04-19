@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 let set =
   String.Set.of_array

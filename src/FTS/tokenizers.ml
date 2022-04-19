@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 let simple =
   let regex = Re.Perl.re ~opts:[ `Multiline ] "\\s+" |> Re.compile in

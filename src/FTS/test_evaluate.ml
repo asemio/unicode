@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 let%expect_test "Get positions" =
   let vector = Tsvector.tag "the quick foxy brown fox jumps over the lazy fox" in
@@ -64,9 +64,7 @@ let%expect_test "Get positions" =
           [
             Clause (NEIGHBOR 1, [ Prefix "fox"; Token "brown" ]);
             Clause (OR, [ Token "jumps"; Clause (NEIGHBOR 1, [ Prefix "f"; Token "jumps" ]) ]);
-          ]
-        )
-    );
+          ] ));
   [%expect {|
     ('fox':* <-> 'brown') <-> ('jumps' | ('f':* <-> 'jumps'))
     ((2 4)) |}];

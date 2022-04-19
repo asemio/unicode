@@ -13,12 +13,10 @@ homepage: "https://github.com/asemio/unicode"
 doc: "https://github.com/asemio/unicode"
 bug-reports: "https://github.com/asemio/unicode/issues"
 depends: [
-  "ocaml" { >= "4.10.0" }
+  "ocaml" { >= "4.11.0" }
   "dune" { >= "1.9.0"}
 
-  "ocamlformat" { = "0.18.0" }
-
-  "core_kernel" { >= "v0.14.0" }
+  "core" { >= "v0.15.0" }
 
   "angstrom" { >= "0.15.0" }
 

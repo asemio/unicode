@@ -38,8 +38,7 @@ let get_len pos opt_len s =
       if n < 0 || pos + n > slen
       then
         failwith
-          (sprintf "Utf8conv: out-of-bounds len argument (string length: %i, pos: %i, len: %i)" slen pos
-             n)
+          (sprintf "Utf8conv: out-of-bounds len argument (string length: %i, pos: %i, len: %i)" slen pos n)
       else n
   in
   len
@@ -392,8 +391,7 @@ let utf8_of_windows1252 ?(pos = 0) ?len
         | _, Some x, _ -> x
         | _, None, _ -> undefined c
       in
-      Buffer.add_string buf x
-    )
+      Buffer.add_string buf x)
   done;
   flush_ascii (pos + len);
   Buffer.contents buf

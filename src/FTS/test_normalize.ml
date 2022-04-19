@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 let%expect_test "Normalize" =
   let test s = print_endline s in

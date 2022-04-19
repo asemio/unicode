@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 external stub_dmetaphone : string -> string * string = "stub_dmetaphone"
 

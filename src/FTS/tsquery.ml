@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 type op =
   | OR
@@ -30,8 +30,7 @@ let quote s =
   Buffer.add_char buf '\'';
   String.iter s ~f:(function
     | '\'' -> Buffer.add_string buf "''"
-    | c -> Buffer.add_char buf c
-    );
+    | c -> Buffer.add_char buf c);
   Buffer.add_char buf '\'';
   Buffer.contents buf
 
@@ -60,8 +59,7 @@ module Record = struct
   let opt to_string : ('r, 'a) combinator =
    fun acc f _r x ->
     Option.value_map x ~default:acc ~f:(fun v ->
-      Token (sprintf "%s=%s" (Field.name f) (to_string v)) :: acc
-    )
+        Token (sprintf "%s=%s" (Field.name f) (to_string v)) :: acc)
 
   let create ?(op = AND) fold = fold ~init:[] |> clause op
 end

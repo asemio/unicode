@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open Angstrom
 
 let unquoted_string_parser ~stop_at =
@@ -11,8 +11,7 @@ let unquoted_string_parser ~stop_at =
     | c when stop_at c -> None
     | c ->
       Buffer.add_char buf c;
-      Some false
-  )
+      Some false)
   >>= fun _ ->
   match Buffer.length buf with
   | 0 -> fail "Empty"
@@ -24,16 +23,15 @@ let unquoted_string_parser ~stop_at =
 let quoted_string_parser =
   let buf = Buffer.create 16 in
   Angstrom.scan_state false (fun escaping c ->
-    match c, escaping with
-    | '\'', true ->
-      Buffer.add_char buf c;
-      Some false
-    | '\'', false -> Some true
-    | _, true -> None
-    | c, false ->
-      Buffer.add_char buf c;
-      Some false
-  )
+      match c, escaping with
+      | '\'', true ->
+        Buffer.add_char buf c;
+        Some false
+      | '\'', false -> Some true
+      | _, true -> None
+      | c, false ->
+        Buffer.add_char buf c;
+        Some false)
   >>= fun _ ->
   let s = Buffer.contents buf in
   Buffer.clear buf;
@@ -42,8 +40,7 @@ let quoted_string_parser =
 let number_parser =
   take_while1 (function
     | '0' .. '9' -> true
-    | _ -> false
-    )
+    | _ -> false)
   >>= fun s ->
   let i = Int.of_string s in
   if Int.is_positive i then return i else fail (sprintf "Invalid position or distance: %d" i)
@@ -98,53 +95,51 @@ let tsquery raw =
   (* let sequence ~sep nested = spaces *> sep_by1 (spaces *> char sep <* spaces) nested <* spaces in *)
   let expr =
     fix (fun expr ->
-      let parens = char '(' *> commit *> expr <* char ')' in
-      let sequence ~sep nested =
-        let+ ll =
-          many1
-            (let+ one = spaces *> nested
-             and+ () = spaces
-             and+ sep = sep
-             and+ () = spaces in
-             one, sep)
-        and+ last = nested <* spaces in
-        List.append ll [ last, NEIGHBOR 0 ]
-      in
-      let op_list =
-        let sep =
-          let message =
-            "Invalid distance in 'followed by' operator: expected '-' or an integer. Ex.: <->, <2>, <3>, \
-             etc."
+        let parens = char '(' *> commit *> expr <* char ')' in
+        let sequence ~sep nested =
+          let+ ll =
+            many1
+              (let+ one = spaces *> nested
+               and+ () = spaces
+               and+ sep = sep
+               and+ () = spaces in
+               one, sep)
+          and+ last = nested <* spaces in
+          List.append ll [ last, NEIGHBOR 0 ]
+        in
+        let op_list =
+          let sep =
+            let message =
+              "Invalid distance in 'followed by' operator: expected '-' or an integer. Ex.: <->, <2>, \
+               <3>, etc."
+            in
+            choice
+              [
+                (char '<' *> commit *> distance_parser ~message <* char '>' >>| fun x -> NEIGHBOR x);
+                char '&' *> commit >>| const AND;
+                char '|' *> commit >>| const OR;
+              ]
           in
-          choice
-            [
-              (char '<' *> commit *> distance_parser ~message <* char '>' >>| fun x -> NEIGHBOR x);
-              char '&' *> commit >>| const AND;
-              char '|' *> commit >>| const OR;
-            ]
+          sequence ~sep (choice [ parens; token_parser ]) >>| fun ll ->
+          let rec loop level acc : (t * op) list -> t * op * (t * op) list = function
+            | (x, op) :: rest when [%equal: op] level op -> loop level (x :: acc) rest
+            | (_, op) :: _ as ll when op << level ->
+              let clause, op, rest = loop op [] ll in
+              loop level acc ((clause, op) :: rest)
+            | (x, op) :: rest -> Clause (level, List.rev (x :: acc)), op, rest
+            | rest -> (
+              match acc with
+              | [ x ] -> x, level, rest
+              | _ -> Clause (level, List.rev acc), level, rest)
+          in
+          let result =
+            match loop (NEIGHBOR 0) [] ll with
+            | x, NEIGHBOR 0, [] -> x
+            | x -> failwithf !"Impossible case: %{sexp: t * op * (t * op) list}" x ()
+          in
+          result
         in
-        sequence ~sep (choice [ parens; token_parser ]) >>| fun ll ->
-        let rec loop level acc : (t * op) list -> t * op * (t * op) list = function
-          | (x, op) :: rest when [%equal: op] level op -> loop level (x :: acc) rest
-          | (_, op) :: _ as ll when op << level ->
-            let clause, op, rest = loop op [] ll in
-            loop level acc ((clause, op) :: rest)
-          | (x, op) :: rest -> Clause (level, List.rev (x :: acc)), op, rest
-          | rest -> (
-            match acc with
-            | [ x ] -> x, level, rest
-            | _ -> Clause (level, List.rev acc), level, rest
-          )
-        in
-        let result =
-          match loop (NEIGHBOR 0) [] ll with
-          | x, NEIGHBOR 0, [] -> x
-          | x -> failwithf !"Impossible case: %{sexp: t * op * (t * op) list}" x ()
-        in
-        result
-      in
-      choice [ parens; op_list; token_parser ] <* spaces
-    )
+        choice [ parens; op_list; token_parser ] <* spaces)
   in
   let parser = expr in
   parse_string ~consume:Consume.All parser raw

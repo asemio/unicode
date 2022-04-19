@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 type lexeme =
   | Token   of string
@@ -34,8 +34,7 @@ module Record = struct
     | true -> acc
     | false ->
       Sequence.fold seq ~init:acc ~f:(fun acc x ->
-        Token (sprintf !"%{Field.name}=%{to_string}" f x) :: acc
-      )
+          Token (sprintf !"%{Field.name}=%{to_string}" f x) :: acc)
 
   let skip : ('r, 'a) combinator = (fun acc _f _r _x -> acc)
 
@@ -49,8 +48,7 @@ module Record = struct
   let opt to_string : ('r, 'a) combinator =
    fun acc f _r x ->
     Option.value_map x ~default:acc ~f:(fun v ->
-      Token (sprintf "%s=%s" (Field.name f) (to_string v)) :: acc
-    )
+        Token (sprintf "%s=%s" (Field.name f) (to_string v)) :: acc)
 
   let create fold = { seq = fold ~init:[] |> Sequence.of_list; last = None; btree = None }
 end
@@ -68,11 +66,10 @@ let concat left right =
     | None ->
       let last =
         Sequence.fold left.seq ~init:None ~f:(fun acc x ->
-          match x, acc with
-          | Token _, x -> x
-          | Indexed (_, ll), None -> List.reduce ll ~f:max
-          | Indexed (_, ll), Some y -> List.reduce (y :: ll) ~f:max
-        )
+            match x, acc with
+            | Token _, x -> x
+            | Indexed (_, ll), None -> List.reduce ll ~f:max
+            | Indexed (_, ll), Some y -> List.reduce (y :: ll) ~f:max)
       in
       left.last <- last;
       last
@@ -83,8 +80,7 @@ let concat left right =
     | Some last ->
       Sequence.map right.seq ~f:(function
         | Token _ as x -> x
-        | Indexed (x, ll) -> Indexed (x, List.map ll ~f:(( + ) last))
-        )
+        | Indexed (x, ll) -> Indexed (x, List.map ll ~f:(( + ) last)))
     | None -> right.seq)
     |> Sequence.append left.seq
   in
@@ -102,7 +98,6 @@ let to_string { seq; _ } =
   Sequence.map seq ~f:(function
     | Token s -> Tsquery.quote s
     | Indexed (s, ll) ->
-      sprintf !"%{Tsquery.quote}:%s" s (List.map ll ~f:Int.to_string |> String.concat ~sep:",")
-    )
+      sprintf !"%{Tsquery.quote}:%s" s (List.map ll ~f:Int.to_string |> String.concat ~sep:","))
   |> Sequence.to_array
   |> String.concat_array ~sep:" "

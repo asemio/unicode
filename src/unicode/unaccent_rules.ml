@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 (* The left hand side must be already in UTF-8 NFC form and a single grapheme cluster *)
 let replacements = [

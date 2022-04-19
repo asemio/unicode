@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 let%expect_test "Tsvector" =
   let test raw =
@@ -96,8 +96,7 @@ let%expect_test "Tsquery" =
     'abc' | 'def'
     (Ok (Clause OR ((Token abc) (Token def)))) |}];
   test "abc | 'def ' | ghi";
-  [%expect
-    {|
+  [%expect {|
     'abc' | 'def ' | 'ghi'
     (Ok (Clause OR ((Token abc) (Token "def ") (Token ghi)))) |}];
   test "abc & def & ghi";
@@ -137,7 +136,8 @@ let%expect_test "Tsquery" =
     (Error
      ": Invalid distance in 'followed by' operator: expected '-' or an integer. Ex.: <->, <2>, <3>, etc.") |}];
   test "abc | (def <2> 'ghi') & xyz";
-  [%expect {|
+  [%expect
+    {|
     ('abc' | ('def' <2> 'ghi')) & 'xyz'
     (Ok
      (Clause AND

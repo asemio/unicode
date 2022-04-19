@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 let ( >>? ) seq = function
 | None -> seq
@@ -26,13 +26,11 @@ let create ~tokenizer ?filter_pre ~normalizer ?mapper ?filter_post raw =
 let name raw =
   create raw ~tokenizer:Tokenizers.simple ~filter_pre:(at_least 2) ~normalizer:Normalizers.name
     ~mapper:(fun s ->
-    let x, y = Unicode.create s |> Unicode.dmetaphone in
-    Array.to_sequence_mutable [| x; sprintf "_%s" y |]
-  )
+      let x, y = Unicode.create s |> Unicode.dmetaphone in
+      Array.to_sequence_mutable [| x; sprintf "_%s" y |])
 
 let tag raw = create raw ~tokenizer:Tokenizers.simple ~normalizer:Normalizers.tag
 
 let english raw =
   create raw ~tokenizer:Tokenizers.simple ~normalizer:Normalizers.english ~filter_post:(fun s ->
-    String.Set.mem English_stopwords.set s |> not
-  )
+      String.Set.mem English_stopwords.set s |> not)

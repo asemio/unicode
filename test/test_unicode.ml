@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open Unicode
 
 let str a b = print_endline (sprintf "%s\n%s\n%b" a b String.(a = b))

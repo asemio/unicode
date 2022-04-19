@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 let fold_neighbor ~gap ll =
   let rec loop = function
@@ -8,8 +8,7 @@ let fold_neighbor ~gap ll =
     | Some acc, first :: rest ->
       let positions =
         Int.Map.filter_mapi acc ~f:(fun ~key:position ~data:width ->
-          Int.Map.find first (position + width + gap - 1) |> Option.map ~f:(( + ) width)
-        )
+            Int.Map.find first (position + width + gap - 1) |> Option.map ~f:(( + ) width))
       in
       if Int.Map.is_empty positions then positions else loop (Some positions, rest)
   in
@@ -22,8 +21,7 @@ let union a b =
       Some x
     | `Both (x, y) when x = y -> Some x
     | `Both (x, y) ->
-      failwithf "Invalid union. Position: %d. Widths: %d, %d. Please report this bug." key x y ()
-  )
+      failwithf "Invalid union. Position: %d. Widths: %d, %d. Please report this bug." key x y ())
 
 let intersect a b =
   Int.Map.merge a b ~f:(fun ~key -> function
@@ -32,8 +30,7 @@ let intersect a b =
       None
     | `Both (x, y) when x = y -> Some x
     | `Both (x, y) ->
-      failwithf "Invalid intersect. Position: %d. Widths: %d, %d. Please report this bug." key x y ()
-  )
+      failwithf "Invalid intersect. Position: %d. Widths: %d, %d. Please report this bug." key x y ())
 
 let rec get_positions (btree : Tsvector.btree) : Tsquery.t -> int Int.Map.t = function
 | Token s -> (
@@ -41,26 +38,22 @@ let rec get_positions (btree : Tsvector.btree) : Tsquery.t -> int Int.Map.t = fu
   | Some (`Indexed x) -> x
   | Some `Unindexed
    |None ->
-    Int.Map.empty
-)
+    Int.Map.empty)
 | Prefix prefix -> (
   String.Map.binary_search btree `Last_equal_to prefix ~compare:(fun ~key ~data:_ x ->
-    match [%compare: string] key x with
-    | 0 -> 0
-    | c when c < 0 -> c
-    | _ when String.is_prefix ~prefix key -> 0
-    | c -> c
-  )
+      match [%compare: string] key x with
+      | 0 -> 0
+      | c when c < 0 -> c
+      | _ when String.is_prefix ~prefix key -> 0
+      | c -> c)
   |> function
   | None -> Int.Map.empty
   | Some (last, _) ->
     String.Map.fold_range_inclusive btree ~min:prefix ~max:last ~init:Int.Map.empty
       ~f:(fun ~key:_ ~data acc ->
-      match data with
-      | `Unindexed -> acc
-      | `Indexed data -> union data acc
-    )
-)
+        match data with
+        | `Unindexed -> acc
+        | `Indexed data -> union data acc))
 | Clause (_, []) -> Int.Map.empty
 | Clause (OR, ll) -> List.map ll ~f:(get_positions btree) |> List.reduce_exn ~f:union
 | Clause (AND, ll) -> List.map ll ~f:(get_positions btree) |> List.reduce_exn ~f:intersect
@@ -78,8 +71,7 @@ let get_btree (vector : Tsvector.t) : Tsvector.btree =
               | Some (`Indexed _ as x) -> x
               | None
                |Some `Unindexed ->
-                `Unindexed
-              )
+                `Unindexed)
           in
           i, acc
         | Indexed (key, _) ->
@@ -88,11 +80,9 @@ let get_btree (vector : Tsvector.t) : Tsvector.btree =
               | None
                |Some `Unindexed ->
                 `Indexed (Int.Map.singleton i 1)
-              | Some (`Indexed acc) -> `Indexed (Int.Map.set acc ~key:i ~data:1)
-              )
+              | Some (`Indexed acc) -> `Indexed (Int.Map.set acc ~key:i ~data:1))
           in
-          i + 1, acc
-      )
+          i + 1, acc)
     in
     vector.btree <- Some map;
     map

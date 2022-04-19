@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 let preserve = function
 | "ç"
@@ -29,7 +29,7 @@ let rec prepare = function
   acc
 | i, (x :: rest, dropped) -> prepare (i - 1, (rest, x :: dropped))
 
-let double_metaphone ?(max_length = 4) ~glyphs ~num_glyphs =
+let double_metaphone ?(max_length = 4) ~glyphs ~num_glyphs () =
   (* let debug (here : Source_code_position.t) = print_endline (sprintf "[%d]" here.pos_lnum) in *)
   let debug _ = () in
   (* It's not safe to index into the original string because ç and ñ are multibyte *)
@@ -117,8 +117,7 @@ let double_metaphone ?(max_length = 4) ~glyphs ~num_glyphs =
         | _ ->
           debug [%here];
           add 'X' 'K';
-          2
-      )
+          2)
       | ('C' :: 'H' :: 'O' :: 'R' :: 'E' :: _, []), _, _, _ ->
         debug [%here];
         add_both 'X';

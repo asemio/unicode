@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 let valid_encodings =
   [
@@ -75,7 +75,7 @@ type enc =
   ]
 
 let recode ?nln ?encoding out_encoding (src : [ `Channel of In_channel.t | `String  of string ])
-  (dst : [ `Channel of Out_channel.t | `Buffer  of Buffer.t ]) =
+   (dst : [ `Channel of Out_channel.t | `Buffer  of Buffer.t ]) =
   let rec loop d e =
     match Uutf.decode d with
     | `Uchar _ as u ->
@@ -105,9 +105,7 @@ let create ?encoding_name raw =
       | _ -> (
         match Uutf.encoding_of_string name with
         | None -> Passthrough raw
-        | Some encoding -> Raw { raw; encoding = Standard encoding }
-      )
-    )
+        | Some encoding -> Raw { raw; encoding = Standard encoding }))
   in
   { value }
 
@@ -236,8 +234,7 @@ let to_title box =
               false
             | `Uchars us ->
               List.iter us ~f:(Uutf.Buffer.add_utf_8 buf);
-              false
-          )
+              false)
           | false, false -> (
             match Uucp.Case.Map.to_lower u with
             | `Self ->
@@ -245,9 +242,7 @@ let to_title box =
               false
             | `Uchars us ->
               List.iter us ~f:(Uutf.Buffer.add_utf_8 buf);
-              false
-          )
-        ))
+              false)))
       true utf8
   in
   { value = Utf8 (Buffer.contents buf) }
@@ -310,7 +305,7 @@ let unaccent box =
   { value = Normalized (Buffer.contents buf) }
 
 let standardize ?(rep = " ") ?(preserve = const false) ?(filter = Char.is_alphanum)
-  ?(case = Char.lowercase) box =
+   ?(case = Char.lowercase) box =
   let bytes = cmp_bytes box in
   let buf = Buffer.create (String.length bytes + 10) in
   let (_ : bool) =
@@ -328,13 +323,12 @@ let standardize ?(rep = " ") ?(preserve = const false) ?(filter = Char.is_alphan
             | None -> glyph
           in
           String.fold chunk ~init:top_prev_junk ~f:(fun prev_junk c ->
-            match filter c with
-            | true ->
-              if prev_junk && Int.(Buffer.length buf <> 0) then Buffer.add_string buf rep;
-              Buffer.add_char buf (case c);
-              false
-            | false -> true
-          ))
+              match filter c with
+              | true ->
+                if prev_junk && Int.(Buffer.length buf <> 0) then Buffer.add_string buf rep;
+                Buffer.add_char buf (case c);
+                false
+              | false -> true))
       false bytes
   in
   { value = Normalized (Buffer.contents buf) }
@@ -353,8 +347,7 @@ let trim ?(unicode_ws = true) box =
             | None, _ when not (Uucp.White.is_white_space u) -> Some i, Some (i, u)
             | (None, _) as x -> x
             | (Some _ as x), _ when not (Uucp.White.is_white_space u) -> x, Some (i, u)
-            | Some _, _ -> acc
-          ))
+            | Some _, _ -> acc))
         (None, None) bytes
     in
     let sliced =
@@ -426,7 +419,7 @@ let dmetaphone ?max_length box =
         () original;
       Queue.to_list queue
     in
-    Dmetaphone.double_metaphone ?max_length ~glyphs ~num_glyphs:(Queue.length queue)
+    Dmetaphone.double_metaphone ?max_length ~glyphs ~num_glyphs:(Queue.length queue) ()
 
 let index box =
   let bytes = utf8_bytes box in
@@ -462,8 +455,7 @@ let slice box u_from u_to =
         try lookup.indexes.(norm_to) + lookup.lengths.(norm_to) with
         | _ -> Array.last lookup.indexes + Array.last lookup.lengths
       in
-      if s_from > s_to then "" else String.slice bytes s_from s_to
-    )
+      if s_from > s_to then "" else String.slice bytes s_from s_to)
   in
   rebox box result
 

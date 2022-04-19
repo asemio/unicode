@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 let%expect_test "Tokenize" =
   let test x = Sequence.to_array x |> sprintf !"%{sexp: string array}" |> print_endline in

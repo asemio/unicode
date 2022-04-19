@@ -5,7 +5,7 @@
   (libraries
     unicode
 
-    core_kernel
+    core
     re
     angstrom
   )

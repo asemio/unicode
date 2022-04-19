@@ -4,7 +4,7 @@
   (libraries
     utf8conv
 
-    core_kernel
+    core
     uucp
     uunf
     uunf.string

@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 type variant =
   | A
@@ -25,8 +25,7 @@ let%expect_test "TSQuery" =
   tag ~accept_prefix:false ~across_words:AND test_string |> to_string |> test;
   [%expect {| 'title' & 'hello' & 'world' & 'welcome' |}];
   name ~accept_prefix:true ~across_words:OR test_string |> to_string |> test;
-  [%expect
-    {| 'TTL':* | '_TTL':* | 'HL':* | '_HL':* | 'ARLT':* | '_FRLT':* | 'ALKM':* | '_FLKM':* |}];
+  [%expect {| 'TTL':* | '_TTL':* | 'HL':* | '_HL':* | 'ARLT':* | '_FRLT':* | 'ALKM':* | '_FLKM':* |}];
   name ~accept_prefix:false ~across_words:AND test_string |> to_string |> test;
   [%expect {| 'TTL' & '_TTL' & 'HL' & '_HL' & 'ARLT' & '_FRLT' & 'ALKM' & '_FLKM' |}];
   english_trigrams ~across_trigrams:(NEIGHBOR 1) ~across_words:AND test_string |> to_string |> test;
@@ -56,5 +55,4 @@ let%expect_test "TSQuery" =
   |> create
   |> to_string
   |> test;
-  [%expect
-    {| ('ff=1' | 'ff=2' | 'ff=3') & ('ee=B' | 'ee=(C foo)') & '(C world)' & 'cc' & 'hello' |}]
+  [%expect {| ('ff=1' | 'ff=2' | 'ff=3') & ('ee=B' | 'ee=(C foo)') & '(C world)' & 'cc' & 'hello' |}]

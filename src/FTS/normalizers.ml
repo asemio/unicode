@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 let create ~filter raw = Unicode.create raw |> Unicode.standardize ~rep:"" ~filter |> Unicode.raw_bytes
 
@@ -8,8 +8,7 @@ let name raw =
      |'a' .. 'z'
      |'-' ->
       true
-    | _ -> false
-    )
+    | _ -> false)
 
 let tag raw =
   let leading = ref true in
@@ -25,8 +24,7 @@ let tag raw =
       true
     | _ ->
       if !leading then leading := false;
-      false
-    )
+      false)
 
 let english raw =
   create raw ~filter:(function
@@ -36,5 +34,4 @@ let english raw =
      |'@'
      |'-' ->
       true
-    | _ -> false
-    )
+    | _ -> false)

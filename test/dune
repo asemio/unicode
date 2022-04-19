@@ -4,7 +4,7 @@
   (libraries
     unicode
 
-    core_kernel
+    core
   )
   (foreign_stubs (language cxx) (names dmetaphone)
     (flags -std=c++17 -O3 -Wall -fPIC -I.)
