@@ -298,7 +298,7 @@ let unaccent box =
   let buf = Buffer.create (String.length bytes + 10) in
   Uuseg_string.fold_utf_8 `Grapheme_cluster
     (fun () glyph ->
-      match String.Map.find Unaccent_rules.lookup glyph with
+      match Map.find Unaccent_rules.lookup glyph with
       | Some rep -> Buffer.add_string buf rep
       | None -> Buffer.add_string buf glyph)
     () bytes;
@@ -318,7 +318,7 @@ let standardize ?(rep = " ") ?(preserve = const false) ?(filter = Char.is_alphan
           false
         | false ->
           let chunk =
-            match String.Map.find Unaccent_rules.lookup glyph with
+            match Map.find Unaccent_rules.lookup glyph with
             | Some rep -> rep
             | None -> glyph
           in

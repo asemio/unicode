@@ -33,4 +33,4 @@ let tag raw = create raw ~tokenizer:Tokenizers.simple ~normalizer:Normalizers.ta
 
 let english raw =
   create raw ~tokenizer:Tokenizers.simple ~normalizer:Normalizers.english ~filter_post:(fun s ->
-      String.Set.mem English_stopwords.set s |> not)
+      Set.mem English_stopwords.set s |> not)

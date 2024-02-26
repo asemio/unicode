@@ -365,23 +365,20 @@ let%expect_test "In depth" =
 
 let%expect_test "Benchmark" =
   let benchmark dict =
-    let t0 = Time_now.nanoseconds_since_unix_epoch () in
+    let t0 = Time_ns.now () in
     String.split_lines dict
     |> List.iter ~f:(fun word ->
          let unicode = Unicode.create word in
          let _code = Unicode.dmetaphone unicode in
          ()
        );
-    let t1 = Time_now.nanoseconds_since_unix_epoch () in
+    let t1 = Time_ns.now () in
     print_endline
       (sprintf !"Time: %dms"
-         (Int63.(t1 - t0 |> to_float)
-         |> Time.Span.of_ns
-         |> Time.Span.to_ms
-         |> Int.of_float
-         |> Int.round_nearest ~to_multiple_of:100
-         )
-      )
+        ((Time_ns.diff t1 t0)
+        |> Time_ns.Span.to_int_ms
+        |> Int.round_nearest ~to_multiple_of:100
+        ))
   in
   benchmark english;
   [%expect {| Time: 1600ms |}]
