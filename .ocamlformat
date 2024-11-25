@@ -1,5 +1,6 @@
-# "Asemio Style" v1.1
-# Last updated for ocamlformat 0.19.0
+# "Asemio Style" v1.3
+# Last updated for ocamlformat 0.25.1
+ocaml-version=5.0.0
 
 # All available options are listed.
 # An option is commented out when the value matches the default
@@ -8,13 +9,11 @@
 # - try out new values for existing options
 # - if a default changed, see if we should follow it or not
 
-# align-cases = false
-align-constructors-decl = true
-align-variants-decl = true
 # assignment-operator = end-line
 # break-before-in = fit-or-vertical
 break-cases = all
 # break-collection-expressions = fit-or-vertical
+# break-colon = after
 # break-fun-decl = wrap
 # break-fun-sig = wrap
 break-infix = fit-or-vertical
@@ -37,7 +36,7 @@ function-indent = 0
 # function-indent-nested = never
 if-then-else = keyword-first
 # indent-after-in = 0
-# indicate-multiline-delimiters = no
+indicate-multiline-delimiters = space
 indicate-nested-or-patterns = space
 # infix-precedence = indent
 # leading-nested-match-parens = false
@@ -45,16 +44,18 @@ let-and = sparse
 # let-binding-indent = 2
 # let-binding-spacing = compact
 # let-module = compact
+# line-endings = lf
 margin = 106
 # match-indent = 0
 # match-indent-nested = never
-max-indent = 3
-# module-item-spacing = sparse
+max-indent = 2
+module-item-spacing = sparse
 # nested-match = wrap
 parens-ite = true
 parens-tuple = multi-line-only
 # parens-tuple-patterns = multi-line-only
 # parse-docstrings = false
+# parse-toplevel-phrases = false
 # sequence-blank-line = preserve-one
 # sequence-style = terminator
 single-case = sparse

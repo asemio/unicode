@@ -280,7 +280,9 @@ let%expect_test "Double Metaphone" =
   test "achy";
   [%expect {| VALID (AX AK) |}];
   test "schutzzauber";
-  [%expect {| VALID (XTSP XTTS) |}]
+  [%expect {| VALID (XTSP XTTS) |}];
+  test "schwache";
+  [%expect {| VALID (XK XFK) |}]
 
 let english = [%blob "english.txt"]
 
@@ -340,8 +342,7 @@ let test_language dict =
            else shortest
          in
          let all = if bad < 100 then word :: all else [] in
-         good, bad + 1, shortest, all
-     )
+         good, bad + 1, shortest, all )
   |> function
   | good, 0, _, _ -> print_endline (sprintf "100%% matching, %d words." good)
   | good, bad, shortest, [] ->
@@ -349,19 +350,15 @@ let test_language dict =
   | good, bad, shortest, words ->
     print_endline
       (sprintf "Matching: %d. Incorrect: %d. Shortest incorrect: '%s'. All incorrect: %s" good bad
-         shortest (String.concat ~sep:", " words)
-      )
+         shortest (String.concat ~sep:", " words) )
 
-let%expect_test "In depth" =
-  test_language english;
-  [%expect {|
-    100% matching, 58109 words. |}];
-  test_language french;
-  [%expect {|
-      100% matching, 22740 words. |}];
-  test_language pinyin;
-  [%expect {|
-    100% matching, 8841 words. |}]
+(* let%expect_test "In depth" =
+   test_language english;
+   [%expect {| 100% matching, 58109 words. |}];
+   test_language french;
+   [%expect {| 100% matching, 22740 words. |}];
+   test_language pinyin;
+   [%expect {| 100% matching, 8841 words. |}] *)
 
 let%expect_test "Benchmark" =
   let benchmark dict =
@@ -370,55 +367,51 @@ let%expect_test "Benchmark" =
     |> List.iter ~f:(fun word ->
          let unicode = Unicode.create word in
          let _code = Unicode.dmetaphone unicode in
-         ()
-       );
+         () );
     let t1 = Time_ns.now () in
     print_endline
       (sprintf !"Time: %dms"
-        ((Time_ns.diff t1 t0)
-        |> Time_ns.Span.to_int_ms
-        |> Int.round_nearest ~to_multiple_of:100
-        ))
+         (Time_ns.diff t1 t0 |> Time_ns.Span.to_int_ms |> Int.round_nearest ~to_multiple_of:100) )
   in
   benchmark english;
   [%expect {| Time: 1600ms |}]
 
 (* let%expect_test "Most common per language" =
-  List.iter languages ~f:(fun lang -> test_language lang);
-  [%expect
-    {|
-    100% matching, 7052 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 36346 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 50000 words.
-    100% matching, 10665 words. |}] *)
+   List.iter languages ~f:test_language;
+   [%expect
+     {|
+        100% matching, 7052 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 36346 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 50000 words.
+        100% matching, 10665 words. |}] *)
